@@ -7,19 +7,18 @@ from tqdm import tqdm
 
 
 def preprocess(in_path, out_path, hparams):
-    #speakers = ["Meelis_Kompus", "Tarmo_Maiberg", "Birgit_Itse", "Vallo_Kelmsaar", "Indrek_Kiisler",
-    #            "Tõnu_Karjatse", "Kai_Vare", "Katarina", "Kristo", "Robert", "Stella"]
-    speakers = ["Stella"]
+    speakers = ["Meelis_Kompus", "Tarmo_Maiberg", "Birgit_Itse", "Vallo_Kelmsaar", "Indrek_Kiisler",
+                "Tõnu_Karjatse", "Kai_Vare", "Katarina", "Kristo", "Robert", "Stella"]
 
     entries = []
     stft = init_stft(hparams)
     for speaker_id, speaker in tqdm(enumerate(speakers)):
         with open(os.path.join(in_path, speaker, 'sentences_filtered.csv'), encoding='utf-8') as f:
-            for audio_file, text in tqdm(csv.reader(f, delimiter=',', escapechar='\\', quotechar="'")):
+            for audio_file, text in tqdm(list(csv.reader(f, delimiter=',', escapechar='\\', quotechar="'"))):
                 audio_path = os.path.join(in_path, speaker, audio_file)
                 mel = mel_spectrogram(audio_path, stft)
                 mel_windows = mel.size(1)
-                mel_path = os.path.join(out_path, f'{os.path.splitext(audio_file)[0]}.npy')
+                mel_path = os.path.join(out_path, f'{speaker}_{os.path.splitext(audio_file)[0]}.npy')
                 np.save(mel_path, mel, allow_pickle=False)
                 entries.append((text, mel_path, mel_windows, speaker_id))
 

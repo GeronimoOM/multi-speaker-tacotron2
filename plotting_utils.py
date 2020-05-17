@@ -59,3 +59,16 @@ def plot_gate_outputs_to_numpy(gate_targets, gate_outputs):
     data = save_figure_to_numpy(fig)
     plt.close()
     return data
+
+
+def plot_speaker_embeddings_to_numpy(embeddings, labels):
+    fig, ax = plt.subplots(figsize=(6, 4))
+    for label in np.unique(labels):
+        label_index = labels == label
+        plt.scatter(embeddings[label_index, 0], embeddings[label_index, 1])
+
+    plt.tight_layout()
+    fig.canvas.draw()
+    data = save_figure_to_numpy(fig)
+    plt.close()
+    return data

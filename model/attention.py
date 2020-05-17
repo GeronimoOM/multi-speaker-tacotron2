@@ -13,6 +13,7 @@ class Attention(nn.Module):
         self.query_layer = Linear(attention_rnn_dim, attention_dim, bias=False, w_init_gain='tanh')
         self.location_layer = Location(attention_location_n_filters, attention_location_kernel_size, attention_dim)
         self.linear = Linear(attention_dim, 1, bias=False)
+        self.score_mask_value = -float('inf')
 
     def forward_memory(self, memory):
         """
@@ -38,7 +39,7 @@ class Attention(nn.Module):
         alignment = alignment.squeeze(-1)  # B, T
 
         if mask is not None:
-            alignment.data.masked_fill_(mask, -float('inf'))
+            alignment.data.masked_fill_(mask, self.score_mask_value)
 
         attention_weights = F.softmax(alignment, dim=1)  # B, T
         attention_context = torch.bmm(attention_weights.unsqueeze(1), memory)

@@ -22,12 +22,10 @@ class Tacotron2Loss(nn.Module):
 
 
 class SpeakerEncoderLoss(nn.Module):
-    def __init__(self, batch_size_speakers, batch_size_speaker_samples, init_w=10.0, init_b=-5.0):
+    def __init__(self, batch_size_speakers, batch_size_speaker_samples):
         super(SpeakerEncoderLoss, self).__init__()
         self.N = batch_size_speakers
         self.M = batch_size_speaker_samples
-        self.w = nn.Parameter(torch.tensor(init_w))
-        self.b = nn.Parameter(torch.tensor(init_b))
 
     def forward(self, speaker_vectors, _):
         centroids = []
@@ -40,9 +38,9 @@ class SpeakerEncoderLoss(nn.Module):
                 centroids_without_one.append((speaker_n_vectors_sum - speaker_n_vectors[m]) / (self.M - 1))
 
         S = torch.empty(self.N, self.N*self.M)
-        S_same_centroid = self.w * F.cosine_similarity(torch.stack(centroids_without_one), speaker_vectors) + self.b
+        S_same_centroid = F.cosine_similarity(torch.stack(centroids_without_one), speaker_vectors)
         for n in range(self.N):
-            S[n] = self.w * F.cosine_similarity(centroids[n].unsqueeze(0), speaker_vectors) + self.b
+            S[n] = F.cosine_similarity(centroids[n].unsqueeze(0), speaker_vectors)
             S[n, n*self.M:(n+1)*self.M] = S_same_centroid[n*self.M:(n+1)*self.M]
         L = -S_same_centroid + S.exp().sum(dim=0).log()
 

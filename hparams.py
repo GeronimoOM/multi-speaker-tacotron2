@@ -8,7 +8,6 @@ tacotron_hparameters = tf.contrib.training.HParams(
     epochs=500,
     iters_per_checkpoint=1000,
     seed=1234,
-    dynamic_loss_scaling=True,
     fp16_run=False,
     use_cuda=False,
     ignore_layers=['embedding.weight'],
@@ -80,17 +79,16 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     # Experiment Parameters        #
     ################################
     epochs=500,
-    iters_per_checkpoint=1000,
+    iters_per_checkpoint=500,
     seed=1234,
-    dynamic_loss_scaling=True,
     fp16_run=False,
     use_cuda=False,
 
     ################################
     # Data Parameters             #
     ################################
-    training_files='/Users/olehmatsuk/Thesis/data/mels/common_voice/data.csv',
-    validation_files='/Users/olehmatsuk/Thesis/data/mels/common_voice/data.csv',
+    training_files='/Users/olehmatsuk/Thesis/data/mels/konekorpus/train.csv',
+    validation_files='/Users/olehmatsuk/Thesis/data/mels/konekorpus/val.csv',
 
     ################################
     # Model Parameters             #
@@ -104,12 +102,10 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     ################################
     # Optimization Hyperparameters #
     ################################
-    use_saved_learning_rate=False,
-    learning_rate=1e-3,
-    weight_decay=1e-6,
-    grad_clip_thresh=1.0,
-    batch_size_speakers=32,
-    batch_size_speaker_samples=10,
+    learning_rate=1e-2,
+    grad_clip_thresh=3.0,
+    batch_size_speakers=11,
+    batch_size_speaker_samples=30,
 )
 
 model_hparams = {

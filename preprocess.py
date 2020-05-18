@@ -1,7 +1,7 @@
 from hparams import create_hparams
 import argparse
-import importlib.util
 import os
+from preprocessors import common_voice_preprocessor, konekorpus_preprocessor
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -14,10 +14,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    spec = importlib.util.spec_from_file_location(args.preprocessor,
-                                                  os.path.join('preprocessors', f'{args.preprocessor}_preprocessor.py'))
-    preprocessor = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(preprocessor)
+    preprocessor = None
+    if args.preprocessor == 'common_voice':
+        preprocessor = common_voice_preprocessor
+    elif args.preprocessor == 'konekorpus':
+        preprocessor = konekorpus_preprocessor
 
     hparameters = create_hparams()
 

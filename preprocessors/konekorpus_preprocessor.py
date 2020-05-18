@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import os
-import csv
 from audio import init_stft, mel_spectrogram
 from tqdm import tqdm
 
@@ -15,20 +14,16 @@ def preprocess(in_path, out_path, hparams):
         if os.path.exists(os.path.join(out_path, f'{speaker}_data.csv')):
             continue
         speaker_entries = []
-        with open(os.path.join(in_path, speaker, 'sentences_filtered.csv'), encoding='utf-8') as f:
-            for audio_file, text in tqdm(list(csv.reader(f, delimiter=',', escapechar='\\', quotechar="'"))):
-                audio_path = os.path.join(in_path, speaker, audio_file)
-                mel = mel_spectrogram(audio_path, stft)
-                mel_windows = mel.size(1)
-                mel_path = os.path.join(out_path, f'{speaker}_{os.path.splitext(audio_file)[0]}.npy')
-                np.save(mel_path, mel, allow_pickle=False)
-                speaker_entries.append((text, mel_path, mel_windows, speaker_id))
-                pd.DataFrame(speaker_entries).to_csv(os.path.join(out_path, f'{speaker}_data.csv'), index=False)
+        speaker_data = pd.read_csv(os.path.join(in_path, speaker, 'sentences_filtered.csv'),
+                                   escapechar='\\', quotechar="'", header=None)
+        for audio_file, text in tqdm(list(speaker_data.itertuples(index=False))[:10]):
+            audio_path = os.path.join(in_path, speaker, audio_file)
+            mel = mel_spectrogram(audio_path, stft)
+            mel_windows = mel.size(1)
+            mel_path = os.path.join(out_path, f'{speaker}_{os.path.splitext(audio_file)[0]}.npy')
+            np.save(mel_path, mel, allow_pickle=False)
+            speaker_entries.append((text, mel_path, mel_windows, speaker_id))
+        pd.DataFrame(speaker_entries).to_csv(os.path.join(out_path, f'{speaker}_data.csv'), index=False)
 
-    entries = []
-    for speaker in speakers:
-        with open(os.path.join(out_path, f'{speaker}_data.csv'), encoding='utf-8') as f:
-            for row in csv.reader(f, delimiter=',', escapechar='\\', quotechar="'"):
-                entries.append(row)
-
-    pd.DataFrame(entries).to_csv(os.path.join(out_path, 'data.csv'), index=False)
+    entries = [pd.read_csv(os.path.join(out_path, f'{speaker}_data.csv')) for speaker in speakers]
+    pd.concat(entries).to_csv(os.path.join(out_path, 'data.csv'), index=False)

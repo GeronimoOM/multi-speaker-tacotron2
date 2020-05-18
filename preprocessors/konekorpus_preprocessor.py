@@ -16,7 +16,7 @@ def preprocess(in_path, out_path, hparams):
         speaker_entries = []
         speaker_data = pd.read_csv(os.path.join(in_path, speaker, 'sentences_filtered.csv'),
                                    escapechar='\\', quotechar="'", header=None)
-        for audio_file, text in tqdm(list(speaker_data.itertuples(index=False))[:10]):
+        for audio_file, text in tqdm(list(speaker_data.itertuples(index=False))):
             audio_path = os.path.join(in_path, speaker, audio_file)
             mel = mel_spectrogram(audio_path, stft)
             mel_windows = mel.size(1)

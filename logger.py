@@ -64,7 +64,7 @@ class SpeakerEncoderLogger(SummaryWriter):
         self.add_scalar("validation.loss", loss, iteration)
 
         pca = PCA(n_components=2)
-        y_pred_2d = pca.fit_transform(y_pred)
+        y_pred_2d = pca.fit_transform(y_pred.cpu().numpy())
         self.add_image(
             'speaker embeddings',
             plot_speaker_embeddings_to_numpy(y_pred_2d, y.cpu().numpy()),

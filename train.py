@@ -61,15 +61,17 @@ def validate(model, val_loader, criterion, iteration, logger):
     model.eval()
     ys = []
     ys_pred = []
+    i = 0
     with torch.no_grad():
         val_loss = 0.0
-        for i, (x, y) in enumerate(val_loader):
+        for x, y in val_loader:
             y_pred = model(x)
             loss = criterion(y_pred, y)
             val_loss += loss.item()
             ys.append(y)
             ys_pred.append(y_pred)
-        val_loss = val_loss / (i + 1)
+            i += 1
+        val_loss = val_loss / i
 
     ys = torch.cat(ys)
     ys_pred = torch.cat(ys_pred)

@@ -37,7 +37,7 @@ class SpeakerEncoderLoss(nn.Module):
             for m in range(self.M):
                 centroids_without_one.append((speaker_n_vectors_sum - speaker_n_vectors[m]) / (self.M - 1))
 
-        S = torch.empty(self.N, self.N*self.M)
+        S = torch.empty(self.N, self.N*self.M, device=speaker_vectors.device)
         S_same_centroid = F.cosine_similarity(torch.stack(centroids_without_one), speaker_vectors)
         for n in range(self.N):
             S[n] = F.cosine_similarity(centroids[n].unsqueeze(0), speaker_vectors)

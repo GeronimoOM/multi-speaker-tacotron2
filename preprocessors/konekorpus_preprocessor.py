@@ -10,17 +10,25 @@ def preprocess(in_path, out_path, hparams):
     speakers = ["Meelis_Kompus", "Tarmo_Maiberg", "Birgit_Itse", "Vallo_Kelmsaar", "Indrek_Kiisler",
                 "Tõnu_Karjatse", "Kai_Vare", "Katarina", "Kristo", "Robert", "Stella"]
 
-    entries = []
     stft = init_stft(hparams)
     for speaker_id, speaker in tqdm(enumerate(speakers)):
+        if os.path.exists(os.path.join(out_path, f'{speaker}_data.csv')):
+            continue
+        speaker_entries = []
         with open(os.path.join(in_path, speaker, 'sentences_filtered.csv'), encoding='utf-8') as f:
-            for audio_file, text in tqdm(list(csv.reader(f, delimiter=',', escapechar='\\', quotechar="'"))):
+            for audio_file, text in tqdm(list(csv.reader(f, delimiter=',', escapechar='\\', quotechar="'"))[:10]):
                 audio_path = os.path.join(in_path, speaker, audio_file)
                 mel = mel_spectrogram(audio_path, stft)
                 mel_windows = mel.size(1)
                 mel_path = os.path.join(out_path, f'{speaker}_{os.path.splitext(audio_file)[0]}.npy')
                 np.save(mel_path, mel, allow_pickle=False)
-                entries.append((text, mel_path, mel_windows, speaker_id))
+                speaker_entries.append((text, mel_path, mel_windows, speaker_id))
+                pd.DataFrame(speaker_entries).to_csv(os.path.join(out_path, f'{speaker}_data.csv'), index=False)
 
-    audio_paths_and_text = pd.DataFrame(entries)
-    audio_paths_and_text.to_csv(os.path.join(out_path, 'data.csv'), index=False)
+    entries = []
+    for speaker in speakers:
+        with open(os.path.join(out_path, f'{speaker}_data.csv'), encoding='utf-8') as f:
+            for row in csv.reader(f, delimiter=',', escapechar='\\', quotechar="'"):
+                entries.append(row)
+
+    pd.DataFrame(entries).to_csv(os.path.join(out_path, 'data.csv'), index=False)

@@ -149,8 +149,8 @@ def train(model, output_directory, checkpoint_path, warm_start, hparams):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model', type=str, default='tacotron')
-    parser.add_argument('-o', '--output_directory', type=str, default=None)
-    parser.add_argument('-c', '--checkpoint_path', type=str, default=None,
+    parser.add_argument('-o', '--output', type=str, default=None)
+    parser.add_argument('-c', '--checkpoint', type=str, default=None,
                         required=False, help='checkpoint path')
     parser.add_argument('--warm_start', action='store_true',
                         help='load model weights only, ignore specified layers')
@@ -158,10 +158,9 @@ if __name__ == '__main__':
                         required=False, help='comma separated name=value pairs')
 
     args = parser.parse_args()
-    output_directory = args.output_directory
-    if output_directory is None:
-        run_time = datetime.now().strftime("%b%d_%H_%M_%S")
-        output_directory = os.path.join('runs', run_time)
+    run_time = datetime.now().strftime("%b%d_%H_%M_%S")
+    output_directory = run_time if args.output is None else f'{args.output}_{run_time}'
+    output_directory = os.path.join('runs', output_directory)
     os.makedirs(output_directory)
 
     model = args.model
@@ -171,4 +170,4 @@ if __name__ == '__main__':
     print(f'Use CUDA: {hparams.use_cuda}')
     print(f'FP16 Run: {hparams.fp16_run}')
 
-    train(model, output_directory, args.checkpoint_path, args.warm_start, hparams)
+    train(model, output_directory, args.checkpoint, args.warm_start, hparams)

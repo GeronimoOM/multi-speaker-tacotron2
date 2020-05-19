@@ -78,8 +78,8 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     ################################
     # Experiment Parameters        #
     ################################
-    epochs=500,
-    iters_per_checkpoint=500,
+    epochs=300,
+    iters_per_checkpoint=200,
     seed=1234,
     fp16_run=False,
     use_cuda=False,

@@ -78,7 +78,7 @@ def validate(model, val_loader, criterion, iteration, logger):
 
     model.train()
     print("Validation loss {}: {:9f}  ".format(iteration, val_loss))
-    logger.log_validation(val_loss, model, ys, ys_pred, iteration)
+    logger.log_validation(val_loss, ys, ys_pred, iteration)
 
 
 def train(model, output_directory, checkpoint_path, warm_start, hparams):
@@ -149,6 +149,7 @@ def train(model, output_directory, checkpoint_path, warm_start, hparams):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model', type=str, default='tacotron')
+    parser.add_argument('-o', '--output_directory', type=str, default=None)
     parser.add_argument('-c', '--checkpoint_path', type=str, default=None,
                         required=False, help='checkpoint path')
     parser.add_argument('--warm_start', action='store_true',
@@ -157,8 +158,10 @@ if __name__ == '__main__':
                         required=False, help='comma separated name=value pairs')
 
     args = parser.parse_args()
-    run_time = datetime.now().strftime("%b%d_%H_%M_%S")
-    output_directory = os.path.join('runs', run_time)
+    output_directory = args.output_directory
+    if output_directory is None:
+        run_time = datetime.now().strftime("%b%d_%H_%M_%S")
+        output_directory = os.path.join('runs', run_time)
     os.makedirs(output_directory)
 
     model = args.model

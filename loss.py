@@ -22,11 +22,12 @@ class Tacotron2Loss(nn.Module):
 
 
 class SpeakerEncoderLoss(nn.Module):
-    def __init__(self, batch_size_speakers, batch_size_speaker_samples, alpha=0.66):
+    def __init__(self, batch_size_speakers, batch_size_speaker_samples, init_w=10.0, init_b=-5.0):
         super(SpeakerEncoderLoss, self).__init__()
         self.N = batch_size_speakers
         self.M = batch_size_speaker_samples
-        self.alpha = alpha
+        self.w = nn.Parameter(torch.tensor(init_w))
+        self.b = nn.Parameter(torch.tensor(init_b))
 
     def forward(self, speaker_vectors, _):
         C = []
@@ -45,6 +46,6 @@ class SpeakerEncoderLoss(nn.Module):
             S[n, :n_fr] = F.cosine_similarity(C[n].unsqueeze(0), speaker_vectors[:n_fr])
             S[n, n_fr:n_to] = S_diag[n_fr:n_to]
             S[n, n_to:] = F.cosine_similarity(C[n].unsqueeze(0), speaker_vectors[n_to:])
-        L = -S_diag + self.alpha * S.exp().sum(dim=0).log()
+        L = -(self.w * S_diag + self.b) + (self.w * S + self.b).exp().sum(dim=0).log()
 
         return L.sum()

@@ -3,6 +3,7 @@ import time
 import argparse
 import math
 from datetime import datetime
+from itertools import chain
 
 import torch
 from torch.utils.data import DataLoader
@@ -49,8 +50,8 @@ def prepare_speaker_encoder(device, output_directory, hparams):
     val_loader = DataLoader(valset, batch_size=None)
 
     model = SpeakerEncoder(hparams).to(device)
-    criterion = SpeakerEncoderLoss(hparams.batch_size_speakers, hparams.batch_size_speaker_samples)
-    optimizer = torch.optim.SGD(model.parameters(), lr=hparams.learning_rate)
+    criterion = SpeakerEncoderLoss(hparams.batch_size_speakers, hparams.batch_size_speaker_samples).to(device)
+    optimizer = torch.optim.SGD(chain(model.parameters(), criterion.parameters()), lr=hparams.learning_rate)
 
     logger = SpeakerEncoderLogger(output_directory)
 
@@ -59,6 +60,7 @@ def prepare_speaker_encoder(device, output_directory, hparams):
 
 def validate(model, val_loader, criterion, iteration, logger):
     model.eval()
+    criterion.eval()
     ys = []
     ys_pred = []
     i = 0
@@ -77,15 +79,16 @@ def validate(model, val_loader, criterion, iteration, logger):
     ys_pred = torch.cat(ys_pred)
 
     model.train()
+    criterion.train()
     print("Validation loss {}: {:9f}  ".format(iteration, val_loss))
     logger.log_validation(val_loss, ys, ys_pred, iteration)
 
 
-def train(model, output_directory, checkpoint_path, warm_start, hparams):
+def train(experiment, output_directory, checkpoint_path, warm_start, hparams):
     torch.manual_seed(hparams.seed)
 
     device = torch.device('cuda' if hparams.use_cuda else 'cpu')
-    prepare_fn = prepare_tacotron if model == 'tacotron' else prepare_speaker_encoder
+    prepare_fn = prepare_tacotron if experiment == 'tacotron' else prepare_speaker_encoder
     train_loader, val_loader, model, criterion, optimizer, logger = prepare_fn(device, output_directory, hparams)
 
     learning_rate = hparams.learning_rate
@@ -101,11 +104,13 @@ def train(model, output_directory, checkpoint_path, warm_start, hparams):
         if warm_start:
             model = warm_start_model(checkpoint_path, model, hparams.ignore_layers)
         else:
-            model, optimizer, _learning_rate, iteration = load_checkpoint(checkpoint_path, model, optimizer)
+            model, critertion, optimizer, _learning_rate, iteration = \
+                load_checkpoint(checkpoint_path, model, criterion, optimizer)
             iteration += 1  # next iteration is iteration + 1
             epoch_offset = max(0, int(iteration / len(train_loader)))
 
     model.train()
+    criterion.train()
     is_overflow = False
     for epoch in range(epoch_offset, hparams.epochs):
         print(f'Epoch: {epoch}')
@@ -113,9 +118,11 @@ def train(model, output_directory, checkpoint_path, warm_start, hparams):
             start = time.perf_counter()
 
             model.zero_grad()
-            y_pred = model(x)
+            criterion.zero_grad()
 
+            y_pred = model(x)
             loss = criterion(y_pred, y)
+
             if hparams.fp16_run:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
                     scaled_loss.backward()
@@ -136,12 +143,12 @@ def train(model, output_directory, checkpoint_path, warm_start, hparams):
                 duration = time.perf_counter() - start
                 print("Train loss {} {:.6f} Grad norm {:.6f} {:.2f}s/it".format(
                     iteration, loss, grad_norm, duration))
-                logger.log_training(loss, grad_norm, learning_rate, duration, iteration)
+                logger.log_training(loss, grad_norm, learning_rate, duration, iteration, criterion)
 
-            if not is_overflow and (iteration % hparams.iters_per_checkpoint == 0):
+            if iteration % hparams.iters_per_checkpoint == 0:
                 validate(model, val_loader, criterion, iteration, logger)
                 checkpoint_path = os.path.join(output_directory, f'checkpoint_{iteration}')
-                save_checkpoint(model, optimizer, learning_rate, iteration, checkpoint_path)
+                save_checkpoint(model, criterion, optimizer, learning_rate, iteration, checkpoint_path)
 
             iteration += 1
 

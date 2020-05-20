@@ -10,14 +10,14 @@ class Tacotron2Logger(SummaryWriter):
     def __init__(self, log_dir):
         super(Tacotron2Logger, self).__init__(log_dir)
 
-    def log_training(self, loss, grad_norm, learning_rate, duration, iteration):
+    def log_training(self, loss, grad_norm, learning_rate, duration, iteration, criterion):
         self.add_scalar("training.loss", loss, iteration)
         self.add_scalar("grad.norm", grad_norm, iteration)
         self.add_scalar("learning.rate", learning_rate, iteration)
         self.add_scalar("duration", duration, iteration)
 
-    def log_validation(self, reduced_loss, y, y_pred, iteration):
-        self.add_scalar("validation.loss", reduced_loss, iteration)
+    def log_validation(self, loss, y, y_pred, iteration):
+        self.add_scalar("validation.loss", loss, iteration)
         _, mel_outputs, gate_outputs, alignments = y_pred
         mel_targets, gate_targets = y
 
@@ -50,11 +50,14 @@ class SpeakerEncoderLogger(SummaryWriter):
     def __init__(self, log_dir):
         super(SpeakerEncoderLogger, self).__init__(log_dir)
 
-    def log_training(self, loss, grad_norm, learning_rate, duration, iteration):
+    def log_training(self, loss, grad_norm, learning_rate, duration, iteration, criterion):
         self.add_scalar("training.loss", loss, iteration)
         self.add_scalar("grad.norm", grad_norm, iteration)
         self.add_scalar("learning.rate", learning_rate, iteration)
         self.add_scalar("duration", duration, iteration)
+        criterion_params = {name: param.item() for name, param in criterion.named_parameters()}
+        self.add_scalar("loss.w", criterion_params['w'], iteration)
+        self.add_scalar("loss.b", criterion_params['b'], iteration)
 
     def log_validation(self, loss, y, y_pred, iteration):
         self.add_scalar("validation.loss", loss, iteration)

@@ -78,8 +78,8 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     ################################
     # Experiment Parameters        #
     ################################
-    epochs=300,
-    iters_per_checkpoint=200,
+    epochs=100,
+    iters_per_checkpoint=1000,
     seed=1234,
     fp16_run=False,
     use_cuda=False,
@@ -114,16 +114,10 @@ model_hparams = {
 }
 
 
-def create_hparams(model='tacotron', hparams_string=None, verbose=False):
-    """Create model hyperparameters. Parse nondefault from given string."""
-
+def create_hparams(model='tacotron', hparams_string=None):
     hparams = model_hparams[model]
 
     if hparams_string:
-        tf.logging.info('Parsing command line hparams: %s', hparams_string)
         hparams.parse(hparams_string)
-
-    if verbose:
-        tf.logging.info('Final parsed hparams: %s', hparams.values())
 
     return hparams

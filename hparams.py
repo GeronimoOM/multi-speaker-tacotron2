@@ -42,8 +42,13 @@ tacotron_hparameters = tf.contrib.training.HParams(
     encoder_n_convolutions=3,
     encoder_embedding_dim=512,
 
+    # Speaker Encoder parameters
+    n_fragment_mel_windows=70,
+    speaker_encoder_dim=256,
+    speaker_encoder_n_layers=3,
+    speaker_encoder_rnn_dim=756,
+
     # Decoder parameters
-    n_frames_per_step=1,  # currently only 1 is supported
     decoder_rnn_dim=1024,
     prenet_dim=256,
     max_decoder_steps=1000,

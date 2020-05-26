@@ -21,7 +21,7 @@ def prepare_tacotron(device, output_directory, hparams):
     trainset = TextMelDataset(hparams.training_files, device, hparams)
     valset = TextMelDataset(hparams.validation_files, device, hparams)
 
-    collate_fn = TextMelCollate(hparams.n_frames_per_step)
+    collate_fn = TextMelCollate()
 
     train_loader = DataLoader(trainset, shuffle=True,
                               batch_size=hparams.batch_size, pin_memory=True,

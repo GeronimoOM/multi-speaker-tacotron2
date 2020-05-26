@@ -22,10 +22,11 @@ class Postnet(nn.Module):
             )
 
     def forward(self, x):
+        x = x.transpose(1, 2)  # B, M, S
         for i, conv in enumerate(self.convolutions):
             x = conv(x)
             if i < len(self.convolutions) - 1:
                 x = torch.tanh(x)
             x = F.dropout(x, 0.5, self.training)
 
-        return x
+        return x.transpose(1, 2)  # B, S, M

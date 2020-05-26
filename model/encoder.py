@@ -38,8 +38,6 @@ class Encoder(nn.Module):
 
         x = x.transpose(1, 2)  # B, T, E
 
-        # pytorch tensor are not reversible, hence the conversion
-        # input_lengths = input_lengths.cpu().numpy()
         if text_lengths is not None:
             x = nn.utils.rnn.pack_padded_sequence(x, text_lengths, batch_first=True)
 

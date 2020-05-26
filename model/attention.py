@@ -22,12 +22,12 @@ class Attention(nn.Module):
         """
         return self.memory_layer(memory)
 
-    def forward(self, memory, processed_memory,
-                query, attention_weights_cat, mask):
+    def forward(self, query, memory, processed_memory,
+                attention_weights_cat, mask):
         """
+        :param query: B, D
         :param memory: B, T, E
         :param processed_memory: B, T, A
-        :param query: D
         :param attention_weights_cat: B, 2, T
         :param mask: B, T
         :return: attention_context: B; attention_weights: B, T

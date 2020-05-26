@@ -1,7 +1,9 @@
+import torch
 from torch import nn
 from .encoder import Encoder
 from .decoder import Decoder
 from .postnet import Postnet
+from .speaker_encoder import SpeakerEncoder
 from utils import get_mask_from_lengths
 
 
@@ -11,41 +13,53 @@ class Tacotron2(nn.Module):
         super(Tacotron2, self).__init__()
         self.fp16_run = hparams.fp16_run
         self.n_mel_channels = hparams.n_mel_channels  # M
+        self.n_fragment_mel_windows = hparams.n_fragment_mel_windows  # F
 
         self.encoder = Encoder(hparams)
         self.decoder = Decoder(hparams)
+        self.speaker_encoder = SpeakerEncoder(hparams)
         self.postnet = Postnet(hparams)
 
     def forward(self, inputs):
-        text, text_lengths, mels, mels_lengths = inputs
+        text, text_lengths, mels, mel_lengths = inputs
 
         encoder_outputs = self.encoder(text, text_lengths)
 
-        mel_outputs, gate_outputs, alignments = self.decoder(encoder_outputs, text_lengths, mels)
+        fragments = mels.unfold(1, self.n_fragment_mel_windows, self.n_fragment_mel_windows // 2).transpose(2, 3)
+        fragment_counts = mel_lengths // (self.n_fragment_mel_windows // 2) - 1
+        fragments = torch.cat([f[:fc] for f, fc in zip(fragments, fragment_counts)])
+        speaker_embeddings = self.speaker_encoder.inference(fragments, fragment_counts.tolist())
+
+        decoder_memory = torch.cat([encoder_outputs,
+                                    speaker_embeddings.unsqueeze(1).repeat(1, encoder_outputs.size(1), 1)], dim=2)
+        mel_outputs, gate_outputs, alignments = self.decoder(decoder_memory, text_lengths, mels)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
 
-        if mels_lengths is not None:
-            mask = ~get_mask_from_lengths(mels_lengths)
+        if mel_lengths is not None:
+            mask = ~get_mask_from_lengths(mel_lengths)
             mask = mask.expand(self.n_mel_channels, mask.size(0), mask.size(1))
-            mask = mask.permute(1, 0, 2)
+            mask = mask.permute(1, 2, 0)
 
             mel_outputs.data.masked_fill_(mask, 0.0)
             mel_outputs_postnet.data.masked_fill_(mask, 0.0)
-            gate_outputs.data.masked_fill_(mask[:, 0, :], 1e3)  # gate energies
+            gate_outputs.data.masked_fill_(mask[:, :, 0], 1e3)  # gate energies
         return mel_outputs, mel_outputs_postnet, gate_outputs, alignments
 
     def inference(self, inputs):
-        embedded_inputs = self.embedding(inputs).transpose(1, 2)
-        encoder_outputs = self.encoder.inference(embedded_inputs)
-        mel_outputs, gate_outputs, alignments = self.decoder.inference(
-            encoder_outputs)
+        text, mel = inputs
+
+        encoder_outputs = self.encoder.inference(text)
+
+        fragments = mel.unfold(1, self.n_fragment_mel_windows, self.n_fragment_mel_windows // 2).transpose(2, 3)[0]
+        speaker_embeddings = self.speaker_encoder.inference(fragments, [fragments.size(0)])
+
+        decoder_memory = torch.cat([encoder_outputs,
+                                    speaker_embeddings.unsqueeze(1).repeat(1, encoder_outputs.size(1), 1)], dim=2)
+        mel_outputs, gate_outputs, alignments = self.decoder.inference(decoder_memory)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
 
-        outputs = self.parse_output(
-            [mel_outputs, mel_outputs_postnet, gate_outputs, alignments])
-
-        return outputs
+        return mel_outputs, mel_outputs_postnet, gate_outputs, alignments

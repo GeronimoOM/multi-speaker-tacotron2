@@ -22,14 +22,11 @@ class TextMelDataset(torch.utils.data.Dataset):
             mel = mel_spectrogram(audio_path, self.stft)
         else:
             mel = torch.from_numpy(np.load(audio_path))
-            assert mel.size(0) == self.stft.n_mel_channels, (
-                'Mel dimension mismatch: given {}, expected {}'.format(
-                    mel.size(0), self.stft.n_mel_channels))
 
-        return mel.to(device=self.device)
+        return mel.transpose(0, 1).to(device=self.device)
 
     def get_text(self, text):
-        text_norm = torch.tensor(text_to_sequence(text, self.text_cleaners), dtype=torch.int, device=self.device)
+        text_norm = torch.tensor(text_to_sequence(text, self.text_cleaners), dtype=torch.long, device=self.device)
         return text_norm
 
     def __getitem__(self, idx):
@@ -43,34 +40,30 @@ class TextMelDataset(torch.utils.data.Dataset):
 
 
 class TextMelCollate:
-    def __init__(self, n_frames_per_step):
-        self.n_frames_per_step = n_frames_per_step
-
     def __call__(self, batch):
         device = batch[0][0].device
+        B = len(batch)
         input_lengths, ids_sorted_decreasing = torch.sort(
             torch.tensor([len(x[0]) for x in batch], dtype=torch.int), dim=0, descending=True)
-        max_input_len = input_lengths[0]
+        T = input_lengths[0]
 
-        text_padded = torch.zeros(len(batch), max_input_len, device=device)
+        text_padded = torch.zeros(B, T, dtype=torch.long, device=device)
         for i in range(len(ids_sorted_decreasing)):
             text = batch[ids_sorted_decreasing[i]][0]
             text_padded[i, :text.size(0)] = text
 
-        num_mels = batch[0][1].size(0)
-        max_target_len = max([x[1].size(1) for x in batch])
-        if max_target_len % self.n_frames_per_step != 0:
-            max_target_len += self.n_frames_per_step - max_target_len % self.n_frames_per_step
-            assert max_target_len % self.n_frames_per_step == 0
+        S = max([x[1].size(0) for x in batch])
+        M = batch[0][1].size(1)
 
-        mel_padded = torch.zeros(len(batch), num_mels, max_target_len, device=device)
-        gate_padded = torch.zeros(len(batch), max_target_len, device=device)
-        output_lengths = torch.empty(len(batch), dtype=torch.int)
+        mel_padded = torch.zeros(B, S, M, device=device)
+        gate_padded = torch.zeros(B, S, device=device)
+        output_lengths = torch.empty(B, dtype=torch.int, device=device)
         for i in range(len(ids_sorted_decreasing)):
             mel = batch[ids_sorted_decreasing[i]][1]
-            mel_padded[i, :, :mel.size(1)] = mel
-            gate_padded[i, mel.size(1)-1:] = 1
-            output_lengths[i] = mel.size(1)
+            s = mel.size(0)
+            mel_padded[i, :s] = mel
+            gate_padded[i, s-1:] = 1
+            output_lengths[i] = s
 
         return (text_padded, input_lengths, mel_padded, output_lengths), (mel_padded, gate_padded)
 
@@ -135,7 +128,7 @@ class MelFragmentIter:
                                            replace=False, p=self.dataset.speaker_p)
 
         # B, M, T
-        mels = torch.empty(self.dataset.batch_size, self.dataset.n_mel_channels, self.dataset.n_fragment_mel_windows,
+        mels = torch.empty(self.dataset.batch_size, self.dataset.n_fragment_mel_windows, self.dataset.n_mel_channels,
                            device=self.dataset.device)
         speakers = torch.empty(self.dataset.batch_size, dtype=torch.int)
 
@@ -146,7 +139,7 @@ class MelFragmentIter:
                                                  replace=False)
             for f in fragments_indices:
                 mel, n = fragments[f]
-                mels[i] = self.dataset.get_fragment(mel, n)
+                mels[i] = self.dataset.get_fragment(mel, n).transpose(0, 1)
                 speakers[i] = s
                 i += 1
 

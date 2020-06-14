@@ -1,8 +1,8 @@
-import numpy as np
+from sklearn.metrics.pairwise import linear_kernel
 from sklearn.decomposition import PCA
 import random
 from torch.utils.tensorboard import SummaryWriter
-from plotting_utils import plot_speaker_embeddings_to_numpy
+from plotting_utils import plot_speaker_embeddings_to_numpy, plot_speaker_embeddings2_to_numpy
 
 
 class Tacotron2Logger(SummaryWriter):
@@ -61,12 +61,18 @@ class SpeakerEncoderLogger(SummaryWriter):
 
     def log_validation(self, loss, y, y_pred, iteration):
         self.add_scalar("validation.loss", loss, iteration)
+        y = y.cpu().numpy()
+        y_pred = y_pred.cpu().numpy()
 
         pca = PCA(n_components=2)
-        y_pred_2d = pca.fit_transform(y_pred.cpu().numpy())
+        y_pred_2d = pca.fit_transform(y_pred)
         self.add_image(
             'speaker embeddings',
-            plot_speaker_embeddings_to_numpy(y_pred_2d, y.cpu().numpy()),
+            plot_speaker_embeddings_to_numpy(y_pred_2d, y),
             iteration, dataformats='HWC')
 
-
+        cosine_mat = linear_kernel(y_pred)
+        self.add_image(
+            'speaker embeddings 2',
+            plot_speaker_embeddings2_to_numpy(cosine_mat, y),
+            iteration, dataformats='HWC')

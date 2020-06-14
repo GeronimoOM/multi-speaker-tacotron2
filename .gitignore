@@ -1,4 +1,5 @@
 venv
 apex
-**/*.pyc
+*.pyc
+**/__pycache__/
 .idea/

@@ -92,8 +92,8 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     ################################
     # Data Parameters             #
     ################################
-    training_files='/Users/olehmatsuk/Thesis/data/mels/konekorpus/train.csv',
-    validation_files='/Users/olehmatsuk/Thesis/data/mels/konekorpus/val.csv',
+    training_files='/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_fragments_train.csv',
+    validation_files='/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_fragments_val.csv',
 
     ################################
     # Model Parameters             #
@@ -109,8 +109,8 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     ################################
     learning_rate=1e-2,
     grad_clip_thresh=3.0,
-    batch_size_speakers=11,
-    batch_size_speaker_samples=30,
+    batch_size_speakers=10,
+    batch_size_speaker_samples=32,
 )
 
 model_hparams = {

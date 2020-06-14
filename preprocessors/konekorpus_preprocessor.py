@@ -1,15 +1,14 @@
 import numpy as np
 import pandas as pd
 import os
-from audio import init_stft, mel_spectrogram
+from audio import mel_spectrogram
 from tqdm import tqdm
 
 
-def preprocess(in_path, out_path, hparams):
+def preprocess(in_path, out_path, stft):
     speakers = ["Meelis_Kompus", "Tarmo_Maiberg", "Birgit_Itse", "Vallo_Kelmsaar", "Indrek_Kiisler",
                 "Tõnu_Karjatse", "Kai_Vare", "Katarina", "Kristo", "Robert", "Stella"]
 
-    stft = init_stft(hparams)
     for speaker_id, speaker in tqdm(enumerate(speakers)):
         if os.path.exists(os.path.join(out_path, f'{speaker}_data.csv')):
             continue
@@ -23,7 +22,8 @@ def preprocess(in_path, out_path, hparams):
             mel_path = os.path.join(out_path, f'{speaker}_{os.path.splitext(audio_file)[0]}.npy')
             np.save(mel_path, mel, allow_pickle=False)
             speaker_entries.append((text, mel_path, mel_windows, speaker_id))
-        pd.DataFrame(speaker_entries).to_csv(os.path.join(out_path, f'{speaker}_data.csv'), index=False)
+        pd.DataFrame(speaker_entries, columns=['text', 'mel', 'mel_len', 'speaker'])\
+            .to_csv(os.path.join(out_path, f'{speaker}_data.csv'), index=False)
 
-    entries = [pd.read_csv(os.path.join(out_path, f'{speaker}_data.csv')) for speaker in speakers]
-    pd.concat(entries).to_csv(os.path.join(out_path, 'data.csv'), index=False)
+    entries = pd.concat([pd.read_csv(os.path.join(out_path, f'{speaker}_data.csv')) for speaker in speakers])
+    entries.to_csv(os.path.join(out_path, 'data.csv'), index=False)

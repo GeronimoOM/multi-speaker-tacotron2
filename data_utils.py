@@ -70,8 +70,8 @@ class TextMelCollate:
 
 class MelFragmentDataset(torch.utils.data.IterableDataset):
 
-    def __init__(self, mel_paths_and_text, device, hparams):
-        mel_paths_and_text = pd.read_csv(mel_paths_and_text).to_numpy()
+    def __init__(self, fragment_paths, device, hparams):
+        fragment_paths = pd.read_csv(fragment_paths)
 
         self.n_mel_channels = hparams.n_mel_channels
         self.n_fragment_mel_windows = hparams.n_fragment_mel_windows
@@ -79,10 +79,8 @@ class MelFragmentDataset(torch.utils.data.IterableDataset):
         self.batch_size_speakers = hparams.batch_size_speakers
         self.batch_size_speaker_samples = hparams.batch_size_speaker_samples
 
-        for _, mel_path, mel_windows, speaker in mel_paths_and_text:
-            n_mel_fragments = mel_windows // self.n_fragment_mel_windows
-            for n in range(n_mel_fragments):
-                self.speaker_fragments.setdefault(speaker, []).append((mel_path, n))
+        for mel_path, speaker, fr, to in fragment_paths.itertuples(index=False):
+            self.speaker_fragments.setdefault(speaker, []).append((mel_path, fr, to))
 
         self.speaker_fragments = [fs for fs in self.speaker_fragments.values()
                                   if len(fs) >= self.batch_size_speaker_samples]
@@ -94,7 +92,7 @@ class MelFragmentDataset(torch.utils.data.IterableDataset):
         self.speaker_p = np.array(speaker_fragment_counts) / self.fragment_count
 
         self.batch_size = self.batch_size_speakers * self.batch_size_speaker_samples
-        self.batch_count = self.fragment_count // self.batch_size * 3
+        self.batch_count = self.fragment_count // self.batch_size
 
         self.device = device
         random.seed(hparams.seed)
@@ -105,8 +103,8 @@ class MelFragmentDataset(torch.utils.data.IterableDataset):
     def __iter__(self):
         return MelFragmentIter(self)
 
-    def get_fragment(self, mel_path, n):
-        return torch.from_numpy(np.load(mel_path)[:, n*self.n_fragment_mel_windows:(n+1)*self.n_fragment_mel_windows])
+    def get_fragment(self, mel_path, fr, to):
+        return torch.from_numpy(np.load(mel_path)[:, fr:to])
 
 
 class MelFragmentIter:
@@ -138,8 +136,8 @@ class MelFragmentIter:
             fragments_indices = np.random.choice(range(len(fragments)), self.dataset.batch_size_speaker_samples,
                                                  replace=False)
             for f in fragments_indices:
-                mel, n = fragments[f]
-                mels[i] = self.dataset.get_fragment(mel, n).transpose(0, 1)
+                mel, fr, to = fragments[f]
+                mels[i] = self.dataset.get_fragment(mel, fr, to).transpose(0, 1)
                 speakers[i] = s
                 i += 1
 

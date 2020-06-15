@@ -109,8 +109,8 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     ################################
     learning_rate=1e-2,
     grad_clip_thresh=3.0,
-    batch_size_speakers=10,
-    batch_size_speaker_samples=32,
+    batch_size_speakers=32,
+    batch_size_speaker_samples=10,
 )
 
 model_hparams = {

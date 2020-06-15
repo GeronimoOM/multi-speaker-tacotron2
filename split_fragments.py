@@ -12,7 +12,8 @@ def split_fragments(fragments_path, out_path, test_size, hparams):
 
     N = hparams.batch_size_speakers
     M = hparams.batch_size_speaker_samples
-    val_speakers = np.random.choice(data['speaker'].unique(), size=N, replace=False)
+    speaker_fragments = data['speaker'].value_counts()
+    val_speakers = np.random.choice(speaker_fragments[speaker_fragments >= M].index.unique(), size=N, replace=False)
     val = pd.concat([train.loc[train['speaker'] == s].sample(M, replace=False, random_state=hparams.seed)
                      for s in val_speakers])
     train = train.drop(val.index)

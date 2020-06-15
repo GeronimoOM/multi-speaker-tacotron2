@@ -18,10 +18,10 @@ def preprocess(in_path, out_path, stft):
         for audio_file, text in tqdm(list(speaker_data.itertuples(index=False))):
             audio_path = os.path.join(in_path, speaker, audio_file)
             mel = mel_spectrogram(audio_path, stft)
-            mel_windows = mel.size(1)
+            mel_len = mel.size(1)
             mel_path = os.path.join(out_path, f'{speaker}_{os.path.splitext(audio_file)[0]}.npy')
             np.save(mel_path, mel, allow_pickle=False)
-            speaker_entries.append((text, mel_path, mel_windows, speaker_id))
+            speaker_entries.append((text, mel_path, mel_len, speaker_id))
         pd.DataFrame(speaker_entries, columns=['text', 'mel', 'mel_len', 'speaker'])\
             .to_csv(os.path.join(out_path, f'{speaker}_data.csv'), index=False)
 

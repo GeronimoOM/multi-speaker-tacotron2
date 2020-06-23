@@ -2,7 +2,7 @@ from hparams import create_hparams
 import argparse
 import os
 from audio import init_stft
-from preprocessors import common_voice_preprocessor, konekorpus_preprocessor
+from preprocessors import common_voice_preprocessor, konekorpus_preprocessor, vctk_preprocessor
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -17,6 +17,8 @@ if __name__ == '__main__':
         preprocessor = common_voice_preprocessor
     elif args.preprocessor == 'konekorpus':
         preprocessor = konekorpus_preprocessor
+    elif args.preprocessor == 'vctk':
+        preprocessor = vctk_preprocessor
 
     os.makedirs(args.output_directory, exist_ok=True)
 

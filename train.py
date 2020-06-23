@@ -18,8 +18,8 @@ from numpy import finfo
 
 
 def prepare_tacotron(device, output_directory, hparams):
-    trainset = TextMelDataset(hparams.training_files, device, hparams)
-    valset = TextMelDataset(hparams.validation_files, device, hparams)
+    trainset = TextMelDataset(hparams.data_train, device, hparams)
+    valset = TextMelDataset(hparams.data_val, device, hparams)
 
     collate_fn = TextMelCollate()
 
@@ -43,8 +43,8 @@ def prepare_tacotron(device, output_directory, hparams):
 
 
 def prepare_speaker_encoder(device, output_directory, hparams):
-    trainset = MelFragmentDataset(hparams.training_files, device, hparams)
-    valset = MelFragmentDataset(hparams.validation_files, device, hparams)
+    trainset = MelFragmentDataset(hparams.data_train, device, hparams)
+    valset = MelFragmentDataset(hparams.data_val, device, hparams)
 
     train_loader = DataLoader(trainset, batch_size=None)
     val_loader = DataLoader(valset, batch_size=None)

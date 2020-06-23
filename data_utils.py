@@ -74,7 +74,7 @@ class MelFragmentDataset(torch.utils.data.IterableDataset):
 
     def __init__(self, fragments_file, device, hparams):
         self.data_dir = hparams.data_dir
-        fragments = pd.read_csv(os.path.join(self.data_dir, fragments_file)).to_numpy()
+        fragments = pd.read_csv(os.path.join(self.data_dir, fragments_file))
 
         self.n_mel_channels = hparams.n_mel_channels
         self.n_fragment_mel_windows = hparams.n_fragment_mel_windows

@@ -1,4 +1,5 @@
 import random
+import os
 import numpy as np
 import pandas as pd
 import torch
@@ -8,14 +9,15 @@ from audio import init_stft, mel_spectrogram
 
 
 class TextMelDataset(torch.utils.data.Dataset):
-    def __init__(self, audio_paths_and_text, device, hparams):
-        self.audio_paths_and_text = pd.read_csv(audio_paths_and_text).to_numpy()
+    def __init__(self, data_file, device, hparams):
+        self.data_dir = hparams.data_dir
+        self.audio_and_text = pd.read_csv(os.path.join(self.data_dir, data_file)).to_numpy()
         self.device = device
         self.load_mel_from_disk = hparams.load_mel_from_disk
         self.text_cleaners = hparams.text_cleaners
         self.stft = init_stft(hparams)
         random.seed(hparams.seed)
-        random.shuffle(self.audio_paths_and_text)
+        random.shuffle(self.audio_and_text)
 
     def get_mel(self, audio_path):
         if not self.load_mel_from_disk:
@@ -30,9 +32,9 @@ class TextMelDataset(torch.utils.data.Dataset):
         return text_norm
 
     def __getitem__(self, idx):
-        text, audio_path, _, _ = self.audio_paths_and_text[idx]
+        text, _, mel, _, _ = self.audio_and_text[idx]
         text = self.get_text(text)
-        mel = self.get_mel(audio_path)
+        mel = self.get_mel(os.path.join(self.data_dir, mel))
         return text, mel
 
     def __len__(self):
@@ -70,8 +72,9 @@ class TextMelCollate:
 
 class MelFragmentDataset(torch.utils.data.IterableDataset):
 
-    def __init__(self, fragment_paths, device, hparams):
-        fragment_paths = pd.read_csv(fragment_paths)
+    def __init__(self, fragments_file, device, hparams):
+        self.data_dir = hparams.data_dir
+        fragments = pd.read_csv(os.path.join(self.data_dir, fragments_file)).to_numpy()
 
         self.n_mel_channels = hparams.n_mel_channels
         self.n_fragment_mel_windows = hparams.n_fragment_mel_windows
@@ -79,7 +82,7 @@ class MelFragmentDataset(torch.utils.data.IterableDataset):
         self.batch_size_speakers = hparams.batch_size_speakers
         self.batch_size_speaker_samples = hparams.batch_size_speaker_samples
 
-        for mel_path, speaker, fr, to in fragment_paths.itertuples(index=False):
+        for mel_path, speaker, fr, to in fragments.itertuples(index=False):
             self.speaker_fragments.setdefault(speaker, []).append((mel_path, fr, to))
 
         self.speaker_fragments = [fs for fs in self.speaker_fragments.values()
@@ -104,7 +107,7 @@ class MelFragmentDataset(torch.utils.data.IterableDataset):
         return MelFragmentIter(self)
 
     def get_fragment(self, mel_path, fr, to):
-        return torch.from_numpy(np.load(mel_path)[:, fr:to])
+        return torch.from_numpy(np.load(os.path.join(self.data_dir, mel_path))[:, fr:to])
 
 
 class MelFragmentIter:

@@ -16,8 +16,9 @@ tacotron_hparameters = tf.contrib.training.HParams(
     # Data Parameters             #
     ################################
     load_mel_from_disk=True,
-    training_files='/Users/olehmatsuk/Thesis/data/mels/konekorpus/data.csv',
-    validation_files='/Users/olehmatsuk/Thesis/data/mels/konekorpus/data.csv',
+    data_dir='/Users/olehmatsuk/Thesis/data/mels/konekorpus',
+    data_train='data_train.csv',
+    data_val='data_val.csv',
     text_cleaners=['english_cleaners'],
 
     ################################
@@ -92,8 +93,9 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     ################################
     # Data Parameters             #
     ################################
-    training_files='/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_fragments_train.csv',
-    validation_files='/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_fragments_val.csv',
+    data_dir='/Users/olehmatsuk/Thesis/data/mels/konekorpus',
+    data_train='data_fragments_train.csv',
+    data_val='data_fragments_val.csv',
 
     ################################
     # Model Parameters             #

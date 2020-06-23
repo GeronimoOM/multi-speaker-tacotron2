@@ -24,14 +24,13 @@ def preprocess(in_path, out_path, stft):
                 text = f.read()
             entryname = os.path.splitext(filename)[0]
 
-            audio_path = os.path.join(in_path, 'wav48', speaker_id, f'{entryname}.wav')
-            mel = mel_spectrogram(audio_path, stft)
+            audio_path = os.path.join('wav48', speaker_id, f'{entryname}.wav')
+            mel = mel_spectrogram(os.path.join(in_path, audio_path), stft)
             mel_len = mel.size(1)
-            mel_path = os.path.join(out_path, f'{entryname}.npy')
-            np.save(mel_path, mel, allow_pickle=False)
-            speaker_entries.append((text, mel_path, mel_len, speaker_id))
+            np.save(os.path.join(out_path, f'{entryname}.npy'), mel, allow_pickle=False)
+            speaker_entries.append((text, audio_path, f'{entryname}.npy', mel_len, speaker_id))
 
-        pd.DataFrame(speaker_entries, columns=['text', 'mel', 'mel_len', 'speaker'])\
+        pd.DataFrame(speaker_entries, columns=['text', 'audio', 'mel', 'mel_len', 'speaker'])\
             .to_csv(os.path.join(out_path, f'{speaker_id}_data.csv'), index=False)
 
     entries = pd.concat([pd.read_csv(os.path.join(out_path, f'{speaker}_data.csv')) for speaker in speakers])

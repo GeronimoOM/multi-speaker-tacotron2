@@ -10,10 +10,11 @@ def fragment(data_path, out_path, hparams):
     data['n_samples'] = data['mel_len'] // F
     entries = []
     for _, row in data.iterrows():
-        entries += [(row['mel'], str(row['speaker']), int(i*F), int((i+1)*F)) for i in range(row['n_samples'])]
+        entries += [(row['audio'], row['mel'], str(row['speaker']), int(i*F), int((i+1)*F))
+                    for i in range(row['n_samples'])]
 
     data_file_name = os.path.splitext(os.path.basename(data_path))[0]
-    fragments = pd.DataFrame(entries, columns=['mel', 'speaker', 'from', 'to'])
+    fragments = pd.DataFrame(entries, columns=['audio', 'mel', 'speaker', 'from', 'to'])
     fragments.to_csv(os.path.join(out_path, f'{data_file_name}_fragments.csv'), index=False)
 
 

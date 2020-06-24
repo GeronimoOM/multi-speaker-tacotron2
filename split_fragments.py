@@ -7,7 +7,7 @@ from hparams import create_hparams
 
 def split_fragments(fragments_path, out_path, hparams):
     data = pd.read_csv(fragments_path)
-    
+
     N = hparams.batch_size_speakers
     M = hparams.batch_size_speaker_samples
     speaker_fragments = data['speaker'].value_counts()

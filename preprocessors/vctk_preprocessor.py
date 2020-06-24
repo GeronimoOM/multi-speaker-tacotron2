@@ -8,7 +8,8 @@ from tqdm import tqdm
 def preprocess(in_path, out_path, stft):
     speakers = []
     for dirpath, dirnames, filenames in tqdm(os.walk(os.path.join(in_path, 'txt'))):
-        if not len(filenames):
+        filenames = [filename for filename in filenames if filename.endswith('.txt')]
+        if len(filenames) == 0:
             continue
 
         speaker_id = os.path.basename(dirpath)
@@ -18,8 +19,6 @@ def preprocess(in_path, out_path, stft):
 
         speaker_entries = []
         for filename in tqdm(filenames):
-            if not filename.endswith('.txt'):
-                continue
             with open(os.path.join(dirpath, filename), 'r', encoding='ISO-8859-1') as f:
                 text = f.read()
             entryname = os.path.splitext(filename)[0]

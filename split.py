@@ -8,7 +8,7 @@ from hparams import create_hparams
 def split(data_path, out_path, test_size, hparams):
     data = pd.read_csv(data_path)
     train, test = train_test_split(data, test_size=test_size, random_state=hparams.seed)
-    train, val = train_test_split(train, val_size=hparams.batch_size*3, random_state=hparams.seed)
+    train, val = train_test_split(train, test_size=hparams.batch_size*3, random_state=hparams.seed)
 
     file_name = os.path.splitext(os.path.basename(data_path))[0]
     train.to_csv(os.path.join(out_path, f'{file_name}_train.csv'), index=False)

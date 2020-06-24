@@ -83,7 +83,7 @@ class MelFragmentDataset(torch.utils.data.IterableDataset):
         self.batch_size_speaker_samples = hparams.batch_size_speaker_samples
 
         for _, row in fragments.iterrows():
-            self.speaker_fragments.setdefault(row['speaker'], []).append((row['mel'], row['fr'], row['to']))
+            self.speaker_fragments.setdefault(row['speaker'], []).append((row['mel'], row['from'], row['to']))
 
         self.speaker_fragments = [fs for fs in self.speaker_fragments.values()
                                   if len(fs) >= self.batch_size_speaker_samples]

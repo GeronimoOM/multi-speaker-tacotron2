@@ -2,21 +2,6 @@ import os
 import torch
 
 
-def warm_start_model(checkpoint_path, model, ignore_layers=None):
-    assert os.path.isfile(checkpoint_path)
-    print(f'Warm starting model from checkpoint {checkpoint_path}')
-    checkpoint_dict = torch.load(checkpoint_path, map_location='cpu')
-    model_dict = checkpoint_dict['state_dict']
-    if ignore_layers is not None:
-        model_dict = {k: v for k, v in model_dict.items()
-                      if k not in ignore_layers}
-        dummy_dict = model.state_dict()
-        dummy_dict.update(model_dict)
-        model_dict = dummy_dict
-    model.load_state_dict(model_dict)
-    return model
-
-
 def load_checkpoint(checkpoint_path, model, criterion, optimizer):
     assert os.path.isfile(checkpoint_path)
     print(f'Loading checkpoint {checkpoint_path}')

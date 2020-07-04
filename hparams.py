@@ -5,20 +5,19 @@ tacotron_hparameters = tf.contrib.training.HParams(
     ################################
     # Experiment Parameters        #
     ################################
-    epochs=500,
+    epochs=1000,
     iters_per_checkpoint=1000,
     seed=1234,
     fp16_run=False,
     use_cuda=False,
-    ignore_layers=['embedding.weight'],
 
     ################################
     # Data Parameters             #
     ################################
     load_mel_from_disk=True,
     data_dir='/Users/olehmatsuk/Thesis/data/mels/vctk',
-    data_train='data_train.csv',
-    data_val='data_val.csv',
+    data_train='/Users/olehmatsuk/Thesis/data/mels/vctk/data.csv,/Users/olehmatsuk/Thesis/data/mels/konekorpus/data.csv',
+    data_val='/Users/olehmatsuk/Thesis/data/mels/vctk/data.csv,/Users/olehmatsuk/Thesis/data/mels/konekorpus/data.csv',
     text_cleaners=['english_cleaners'],
 
     ################################
@@ -44,8 +43,9 @@ tacotron_hparameters = tf.contrib.training.HParams(
     encoder_embedding_dim=512,
 
     # Speaker Encoder parameters
+    speaker_encoder=False,
     n_fragment_mel_windows=70,
-    speaker_encoder_dim=256,
+    speaker_encoder_dim=128,
     speaker_encoder_n_layers=3,
     speaker_encoder_rnn_dim=756,
 
@@ -84,8 +84,8 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     ################################
     # Experiment Parameters        #
     ################################
-    epochs=500,
-    iters_per_checkpoint=1000,
+    epochs=1000,
+    iters_per_checkpoint=2000,
     seed=1234,
     fp16_run=False,
     use_cuda=False,
@@ -93,9 +93,8 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     ################################
     # Data Parameters             #
     ################################
-    data_dir='/Users/olehmatsuk/Thesis/data/mels/vctk',
-    data_train='data_train_fragments_train.csv',
-    data_val='data_train_fragments_val.csv',
+    data_train='/Users/olehmatsuk/Thesis/data/mels/vctk/data_fragments.csv,/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_fragments.csv',
+    data_val='/Users/olehmatsuk/Thesis/data/mels/vctk/data_fragments.csv,/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_fragments.csv',
 
     ################################
     # Model Parameters             #
@@ -104,13 +103,13 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     n_fragment_mel_windows=70,
     speaker_encoder_n_layers=3,
     speaker_encoder_rnn_dim=756,
-    speaker_encoder_dim=256,
+    speaker_encoder_dim=128,
 
     ################################
     # Optimization Hyperparameters #
     ################################
     learning_rate=1e-2,
-    grad_clip_thresh=3.0,
+    grad_clip_thresh=5.0,
     batch_size_speakers=32,
     batch_size_speaker_samples=10,
 )

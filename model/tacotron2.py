@@ -17,7 +17,9 @@ class Tacotron2(nn.Module):
 
         self.encoder = Encoder(hparams)
         self.decoder = Decoder(hparams)
-        self.speaker_encoder = SpeakerEncoder(hparams)
+        self.speaker_encoder = None
+        if hparams.speaker_encoder:
+            self.speaker_encoder = SpeakerEncoder(hparams)
         self.postnet = Postnet(hparams)
 
     def forward(self, inputs):
@@ -25,14 +27,15 @@ class Tacotron2(nn.Module):
 
         encoder_outputs = self.encoder(text, text_lengths)
 
-        fragments = mels.unfold(1, self.n_fragment_mel_windows, self.n_fragment_mel_windows // 2).transpose(2, 3)
-        fragment_counts = mel_lengths // (self.n_fragment_mel_windows // 2) - 1
-        fragments = torch.cat([f[:fc] for f, fc in zip(fragments, fragment_counts)])
-        speaker_embeddings = self.speaker_encoder.inference(fragments, fragment_counts.tolist())
+        if self.speaker_encoder is not None:
+            fragments = mels.unfold(1, self.n_fragment_mel_windows, self.n_fragment_mel_windows // 2).transpose(2, 3)
+            fragment_counts = mel_lengths // (self.n_fragment_mel_windows // 2) - 1
+            fragments = torch.cat([f[:fc] for f, fc in zip(fragments, fragment_counts)])
+            speaker_embeddings = self.speaker_encoder.inference(fragments, fragment_counts.tolist())
+            encoder_outputs = torch.cat([encoder_outputs,
+                                         speaker_embeddings.unsqueeze(1).repeat(1, encoder_outputs.size(1), 1)], dim=2)
 
-        decoder_memory = torch.cat([encoder_outputs,
-                                    speaker_embeddings.unsqueeze(1).repeat(1, encoder_outputs.size(1), 1)], dim=2)
-        mel_outputs, gate_outputs, alignments = self.decoder(decoder_memory, text_lengths, mels)
+        mel_outputs, gate_outputs, alignments = self.decoder(encoder_outputs, text_lengths, mels)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet

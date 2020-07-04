@@ -11,7 +11,9 @@ class Decoder(nn.Module):
     def __init__(self, hparams):
         super(Decoder, self).__init__()
         self.n_mel_channels = hparams.n_mel_channels
-        self.encoder_embedding_dim = hparams.encoder_embedding_dim + hparams.speaker_encoder_dim
+        self.encoder_embedding_dim = hparams.encoder_embedding_dim
+        if hparams.speaker_encoder:
+            self.encoder_embedding_dim += hparams.speaker_encoder_dim
         self.prenet_dim = hparams.prenet_dim
         self.decoder_rnn_dim = hparams.decoder_rnn_dim
         self.gate_threshold = hparams.gate_threshold

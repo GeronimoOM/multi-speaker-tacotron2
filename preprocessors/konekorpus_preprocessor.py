@@ -9,7 +9,7 @@ def preprocess(in_path, out_path, stft):
     speakers = ["Meelis_Kompus", "Tarmo_Maiberg", "Birgit_Itse", "Vallo_Kelmsaar", "Indrek_Kiisler",
                 "Tõnu_Karjatse", "Kai_Vare", "Katarina", "Kristo", "Robert", "Stella"]
 
-    for speaker_id, speaker in tqdm(enumerate(speakers)):
+    for speaker in tqdm(speakers):
         if os.path.exists(os.path.join(out_path, f'{speaker}_data.csv')):
             continue
 
@@ -21,7 +21,7 @@ def preprocess(in_path, out_path, stft):
             mel_len = mel.size(1)
             mel_file = f'{speaker}_{os.path.splitext(audio)[0]}.npy'
             np.save(os.path.join(out_path, mel_file), mel, allow_pickle=False)
-            speaker_entries.append((text, os.path.join(speaker, audio), mel_file, mel_len, speaker_id))
+            speaker_entries.append((text, os.path.join(speaker, audio), mel_file, mel_len, speaker))
         pd.DataFrame(speaker_entries, columns=['text', 'audio', 'mel', 'mel_len', 'speaker'])\
             .to_csv(os.path.join(out_path, f'{speaker}_data.csv'), index=False)
 

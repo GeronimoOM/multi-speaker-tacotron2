@@ -12,7 +12,7 @@ from model import Tacotron2, SpeakerEncoder
 from data_utils import TextMelDataset, TextMelCollate, MelFragmentDataset
 from loss import Tacotron2Loss, SpeakerEncoderLoss
 from logger import Tacotron2Logger, SpeakerEncoderLogger
-from train_utils import warm_start_model, load_checkpoint, save_checkpoint
+from train_utils import load_checkpoint, save_checkpoint
 from hparams import create_hparams
 from numpy import finfo
 
@@ -31,6 +31,11 @@ def prepare_tacotron(device, output_directory, hparams):
                             pin_memory=True, collate_fn=collate_fn)
 
     model = Tacotron2(hparams).to(device)
+    if hparams.speaker_encoder:
+        model.speaker_encoder.load_state_dict(torch.load(hparams.speaker_encoder, map_location='cpu')['state_dict'])
+        model.speaker_encoder.to(device)
+        for param in model.speaker_encoder.parameters():
+            param.requires_grad = False
     if hparams.fp16_run:
         model.decoder.attention_layer.score_mask_value = finfo('float16').min
 
@@ -101,13 +106,10 @@ def train(experiment, output_directory, checkpoint_path, warm_start, hparams):
     iteration = 0
     epoch_offset = 0
     if checkpoint_path is not None:
-        if warm_start:
-            model = warm_start_model(checkpoint_path, model, hparams.ignore_layers)
-        else:
-            model, critertion, optimizer, _learning_rate, iteration = \
-                load_checkpoint(checkpoint_path, model, criterion, optimizer)
-            iteration += 1  # next iteration is iteration + 1
-            epoch_offset = max(0, int(iteration / len(train_loader)))
+        model, critertion, optimizer, _learning_rate, iteration = \
+            load_checkpoint(checkpoint_path, model, criterion, optimizer)
+        iteration += 1  # next iteration is iteration + 1
+        epoch_offset = max(0, int(iteration / len(train_loader)))
 
     model.train()
     criterion.train()

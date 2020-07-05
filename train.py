@@ -42,7 +42,7 @@ def prepare_tacotron(device, output_directory, hparams):
     criterion = Tacotron2Loss()
     optimizer = torch.optim.Adam(model.parameters(), lr=hparams.learning_rate, weight_decay=hparams.weight_decay)
 
-    logger = Tacotron2Logger(output_directory)
+    logger = Tacotron2Logger(output_directory, hparams)
 
     return train_loader, val_loader, model, criterion, optimizer, logger
 

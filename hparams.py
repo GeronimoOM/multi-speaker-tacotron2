@@ -16,8 +16,8 @@ tacotron_hparameters = tf.contrib.training.HParams(
     ################################
     load_mel_from_disk=True,
     data_dir='/Users/olehmatsuk/Thesis/data/mels/vctk',
-    data_train='/Users/olehmatsuk/Thesis/data/mels/vctk/data.csv,/Users/olehmatsuk/Thesis/data/mels/konekorpus/data.csv',
-    data_val='/Users/olehmatsuk/Thesis/data/mels/vctk/data.csv,/Users/olehmatsuk/Thesis/data/mels/konekorpus/data.csv',
+    data_train='/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_train.csv',
+    data_val='/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_val.csv',
     text_cleaners=['english_cleaners'],
 
     ################################
@@ -76,8 +76,13 @@ tacotron_hparameters = tf.contrib.training.HParams(
     learning_rate=1e-3,
     weight_decay=1e-6,
     grad_clip_thresh=1.0,
-    batch_size=64,
-    mask_padding=True  # set model's padded outputs to padded values
+    batch_size=128,
+    mask_padding=True,  # set model's padded outputs to padded values
+
+    ################################
+    # Inference Hyperparameters #
+    ################################
+    waveglow_path='/Users/olehmatsuk/Thesis/waveglow_256channels_universal_v5.pt'
 )
 
 speaker_encoder_hparameters = tf.contrib.training.HParams(

@@ -20,6 +20,7 @@ class Decoder(nn.Module):
         self.max_decoder_steps = hparams.max_decoder_steps
         self.p_attention_dropout = hparams.p_attention_dropout
         self.p_decoder_dropout = hparams.p_decoder_dropout
+        self.dtype = torch.float16 if hparams.fp16_run else torch.float32
 
         self.prenet = Prenet(
             hparams.n_mel_channels,
@@ -58,7 +59,7 @@ class Decoder(nn.Module):
         self.initialize_decoder_states(B, T)
         self.memory = memory
         self.processed_memory = self.attention_layer.forward_memory(memory)
-        self.mask = ~get_mask_from_lengths(memory_lengths)
+        self.mask = ~get_mask_from_lengths(memory_lengths).to(device=module_device(self))
 
         decoder_input = self.get_go_frame(B).unsqueeze(0)  # 1, B, M
         decoder_inputs = decoder_inputs.transpose(0, 1)  # S, B, M
@@ -112,18 +113,18 @@ class Decoder(nn.Module):
         return mel_outputs, gate_outputs, alignments
 
     def get_go_frame(self, B):
-        return torch.zeros(B, self.n_mel_channels, device=module_device(self))
+        return torch.zeros(B, self.n_mel_channels, device=module_device(self), dtype=self.dtype)
 
     def initialize_decoder_states(self, B, T):
-        self.attention_hidden = torch.zeros(B, self.decoder_rnn_dim, device=module_device(self))
-        self.attention_cell = torch.zeros(B, self.decoder_rnn_dim, device=module_device(self))
+        self.attention_hidden = torch.zeros(B, self.decoder_rnn_dim, device=module_device(self), dtype=self.dtype)
+        self.attention_cell = torch.zeros(B, self.decoder_rnn_dim, device=module_device(self), dtype=self.dtype)
 
-        self.decoder_hidden = torch.zeros(B, self.decoder_rnn_dim, device=module_device(self))
-        self.decoder_cell = torch.zeros(B, self.decoder_rnn_dim, device=module_device(self))
+        self.decoder_hidden = torch.zeros(B, self.decoder_rnn_dim, device=module_device(self), dtype=self.dtype)
+        self.decoder_cell = torch.zeros(B, self.decoder_rnn_dim, device=module_device(self), dtype=self.dtype)
 
-        self.attention_weights = torch.zeros(B, T, device=module_device(self))
-        self.attention_weights_cum = torch.zeros(B, T, device=module_device(self))
-        self.attention_context = torch.zeros(B, self.encoder_embedding_dim, device=module_device(self))
+        self.attention_weights = torch.zeros(B, T, device=module_device(self), dtype=self.dtype)
+        self.attention_weights_cum = torch.zeros(B, T, device=module_device(self), dtype=self.dtype)
+        self.attention_context = torch.zeros(B, self.encoder_embedding_dim, device=module_device(self), dtype=self.dtype)
 
     def decode(self, decoder_input):
         cell_input = torch.cat((decoder_input, self.attention_context), -1)  # B, M + E

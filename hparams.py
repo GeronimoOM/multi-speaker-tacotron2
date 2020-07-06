@@ -15,7 +15,6 @@ tacotron_hparameters = tf.contrib.training.HParams(
     # Data Parameters             #
     ################################
     load_mel_from_disk=True,
-    data_dir='/Users/olehmatsuk/Thesis/data/mels/vctk',
     data_train='/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_train.csv',
     data_val='/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_val.csv',
     text_cleaners=['english_cleaners'],

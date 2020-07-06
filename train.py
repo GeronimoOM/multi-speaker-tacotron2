@@ -24,11 +24,11 @@ def prepare_tacotron(device, output_directory, hparams):
     collate_fn = TextMelCollate()
 
     train_loader = DataLoader(trainset, shuffle=True,
-                              batch_size=hparams.batch_size, pin_memory=True,
+                              batch_size=hparams.batch_size,
                               drop_last=True, collate_fn=collate_fn)
 
     val_loader = DataLoader(valset, shuffle=False, batch_size=hparams.batch_size,
-                            pin_memory=True, collate_fn=collate_fn)
+                            collate_fn=collate_fn)
 
     model = Tacotron2(hparams).to(device)
     if hparams.speaker_encoder:
@@ -42,7 +42,7 @@ def prepare_tacotron(device, output_directory, hparams):
     criterion = Tacotron2Loss()
     optimizer = torch.optim.Adam(model.parameters(), lr=hparams.learning_rate, weight_decay=hparams.weight_decay)
 
-    logger = Tacotron2Logger(output_directory, hparams)
+    logger = Tacotron2Logger(output_directory)
 
     return train_loader, val_loader, model, criterion, optimizer, logger
 
@@ -66,30 +66,18 @@ def prepare_speaker_encoder(device, output_directory, hparams):
 def validate(model, val_loader, criterion, iteration, logger):
     model.eval()
     criterion.eval()
-    ys = []
-    ys_pred = []
-    i = 0
     with torch.no_grad():
-        val_loss = 0.0
-        for x, y in val_loader:
-            y_pred = model(x)
-            loss = criterion(y_pred, y)
-            val_loss += loss.item()
-            ys.append(y)
-            ys_pred.append(y_pred)
-            i += 1
-        val_loss = val_loss / i
-
-    ys = torch.cat(ys)
-    ys_pred = torch.cat(ys_pred)
+        x, y = next(iter(val_loader))
+        y_pred = model(x)
+        val_loss = criterion(y_pred, y).item()
 
     model.train()
     criterion.train()
     print("Validation loss {}: {:9f}  ".format(iteration, val_loss))
-    logger.log_validation(val_loss, ys, ys_pred, iteration)
+    logger.log_validation(val_loss, y, y_pred, iteration)
 
 
-def train(experiment, output_directory, checkpoint_path, warm_start, hparams):
+def train(experiment, output_directory, checkpoint_path, hparams):
     torch.manual_seed(hparams.seed)
 
     device = torch.device('cuda' if hparams.use_cuda else 'cpu')
@@ -161,8 +149,6 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output', type=str, default=None)
     parser.add_argument('-c', '--checkpoint', type=str, default=None,
                         required=False, help='checkpoint path')
-    parser.add_argument('--warm_start', action='store_true',
-                        help='load model weights only, ignore specified layers')
     parser.add_argument('--hparams', type=str,
                         required=False, help='comma separated name=value pairs')
 
@@ -179,4 +165,4 @@ if __name__ == '__main__':
     print(f'Use CUDA: {hparams.use_cuda}')
     print(f'FP16 Run: {hparams.fp16_run}')
 
-    train(model, output_directory, args.checkpoint, args.warm_start, hparams)
+    train(model, output_directory, args.checkpoint, hparams)

@@ -55,12 +55,13 @@ class Tacotron2(nn.Module):
 
         encoder_outputs = self.encoder.inference(text)
 
-        fragments = mel.unfold(1, self.n_fragment_mel_windows, self.n_fragment_mel_windows // 2).transpose(2, 3)[0]
-        speaker_embeddings = self.speaker_encoder.inference(fragments, [fragments.size(0)])
+        if self.speaker_encoder is not None:
+            fragments = mel.unfold(1, self.n_fragment_mel_windows, self.n_fragment_mel_windows // 2).transpose(2, 3)[0]
+            speaker_embeddings = self.speaker_encoder.inference(fragments, [fragments.size(0)])
 
-        decoder_memory = torch.cat([encoder_outputs,
-                                    speaker_embeddings.unsqueeze(1).repeat(1, encoder_outputs.size(1), 1)], dim=2)
-        mel_outputs, gate_outputs, alignments = self.decoder.inference(decoder_memory)
+            encoder_outputs = torch.cat([encoder_outputs,
+                                         speaker_embeddings.unsqueeze(1).repeat(1, encoder_outputs.size(1), 1)], dim=2)
+        mel_outputs, gate_outputs, alignments = self.decoder.inference(encoder_outputs)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet

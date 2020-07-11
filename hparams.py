@@ -10,6 +10,7 @@ tacotron_hparameters = tf.contrib.training.HParams(
     seed=1234,
     fp16_run=False,
     use_cuda=False,
+    ignore_layers=['embedding.weight'],
 
     ################################
     # Data Parameters             #

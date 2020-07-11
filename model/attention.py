@@ -12,7 +12,7 @@ class Attention(nn.Module):
         self.memory_layer = Linear(embedding_dim, attention_dim, bias=False, w_init_gain='tanh')
         self.query_layer = Linear(attention_rnn_dim, attention_dim, bias=False, w_init_gain='tanh')
         self.location_layer = Location(attention_location_n_filters, attention_location_kernel_size, attention_dim)
-        self.linear = Linear(attention_dim, 1, bias=False)
+        self.v = Linear(attention_dim, 1, bias=False)
         self.score_mask_value = -float('inf')
 
     def forward_memory(self, memory):
@@ -35,7 +35,7 @@ class Attention(nn.Module):
         processed_query = self.query_layer(query.unsqueeze(1))  # B, 1, A
         processed_attention_weights = self.location_layer(attention_weights_cat)  # B, T, A
 
-        alignment = self.linear(torch.tanh(processed_query + processed_attention_weights + processed_memory))
+        alignment = self.v(torch.tanh(processed_query + processed_attention_weights + processed_memory))
         alignment = alignment.squeeze(-1)  # B, T
 
         if mask is not None:

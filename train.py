@@ -12,7 +12,7 @@ from model import Tacotron2, SpeakerEncoder
 from data_utils import TextMelDataset, TextMelCollate, MelFragmentDataset
 from loss import Tacotron2Loss, SpeakerEncoderLoss
 from logger import Tacotron2Logger, SpeakerEncoderLogger
-from train_utils import load_checkpoint, save_checkpoint
+from train_utils import load_checkpoint, save_checkpoint, warm_start_model
 from hparams import create_hparams
 from numpy import finfo
 
@@ -23,11 +23,16 @@ def prepare_tacotron(device, output_directory, hparams):
 
     collate_fn = TextMelCollate()
 
-    train_loader = DataLoader(trainset, shuffle=True,
+    train_loader = DataLoader(trainset,
+                              shuffle=True,
+                              pin_memory=False,
                               batch_size=hparams.batch_size,
                               drop_last=True, collate_fn=collate_fn)
 
-    val_loader = DataLoader(valset, shuffle=False, batch_size=hparams.batch_size,
+    val_loader = DataLoader(valset,
+                            shuffle=False,
+                            pin_memory=False,
+                            batch_size=hparams.batch_size,
                             collate_fn=collate_fn)
 
     model = Tacotron2(hparams).to(device)
@@ -77,8 +82,10 @@ def validate(model, val_loader, criterion, iteration, logger):
     logger.log_validation(val_loss, y, y_pred, iteration)
 
 
-def train(experiment, output_directory, checkpoint_path, hparams):
+def train(experiment, output_directory, checkpoint_path, warm_start, hparams):
     torch.manual_seed(hparams.seed)
+    if hparams.use_cuda:
+        torch.cuda.manual_seed(hparams.seed)
 
     device = torch.device('cuda' if hparams.use_cuda else 'cpu')
     prepare_fn = prepare_tacotron if experiment == 'tacotron' else prepare_speaker_encoder
@@ -94,10 +101,14 @@ def train(experiment, output_directory, checkpoint_path, hparams):
     iteration = 0
     epoch_offset = 0
     if checkpoint_path is not None:
-        model, critertion, optimizer, _learning_rate, iteration = \
-            load_checkpoint(checkpoint_path, model, criterion, optimizer)
-        iteration += 1  # next iteration is iteration + 1
-        epoch_offset = max(0, int(iteration / len(train_loader)))
+        if warm_start:
+            model = warm_start_model(
+                checkpoint_path, model, hparams.ignore_layers)
+        else:
+            model, critertion, optimizer, _learning_rate, iteration = \
+                load_checkpoint(checkpoint_path, model, criterion, optimizer)
+            iteration += 1  # next iteration is iteration + 1
+            epoch_offset = max(0, int(iteration / len(train_loader)))
 
     model.train()
     criterion.train()
@@ -135,7 +146,7 @@ def train(experiment, output_directory, checkpoint_path, hparams):
                     iteration, loss, grad_norm, duration))
                 logger.log_training(loss, grad_norm, learning_rate, duration, iteration, criterion)
 
-            if iteration % hparams.iters_per_checkpoint == 0:
+            if not is_overflow and iteration % hparams.iters_per_checkpoint == 0:
                 validate(model, val_loader, criterion, iteration, logger)
                 checkpoint_path = os.path.join(output_directory, f'checkpoint_{iteration}')
                 save_checkpoint(model, criterion, optimizer, learning_rate, iteration, checkpoint_path)
@@ -149,20 +160,23 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output', type=str, default=None)
     parser.add_argument('-c', '--checkpoint', type=str, default=None,
                         required=False, help='checkpoint path')
+    parser.add_argument('--warm_start', action='store_true',
+                        help='load model weights only, ignore specified layers')
     parser.add_argument('--hparams', type=str,
                         required=False, help='comma separated name=value pairs')
 
     args = parser.parse_args()
+
+    model = args.model
+    hparams = create_hparams(args.model, args.hparams)
+
     run_time = datetime.now().strftime("%b%d_%H_%M_%S")
     output_directory = run_time if args.output is None else f'{args.output}_{run_time}'
     output_directory = os.path.join('runs', output_directory)
     os.makedirs(output_directory)
 
-    model = args.model
-    hparams = create_hparams(args.model, args.hparams)
-
     print(f'Model: {args.model}')
     print(f'Use CUDA: {hparams.use_cuda}')
     print(f'FP16 Run: {hparams.fp16_run}')
 
-    train(model, output_directory, args.checkpoint, hparams)
+    train(model, output_directory, args.checkpoint, args.warm_start, hparams)

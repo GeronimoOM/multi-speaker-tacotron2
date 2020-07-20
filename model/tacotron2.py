@@ -18,7 +18,7 @@ class Tacotron2(nn.Module):
         self.encoder = Encoder(hparams)
         self.decoder = Decoder(hparams)
         self.speaker_encoder = None
-        if hparams.speaker_encoder:
+        if len(hparams.speaker_encoder) > 0:
             self.speaker_encoder = SpeakerEncoder(hparams)
         self.postnet = Postnet(hparams)
 

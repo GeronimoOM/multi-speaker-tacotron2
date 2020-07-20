@@ -1,6 +1,14 @@
 import os
 import torch
 
+speaker_encoder_extended_parameters = [
+    'decoder.attention_rnn.weight_ih',
+    'decoder.attention_layer.memory_layer.linear_layer.weight',
+    'decoder.decoder_rnn.weight_ih',
+    'decoder.linear_projection.linear_layer.weight',
+    'decoder.gate_layer.linear_layer.weight'
+]
+
 
 def load_checkpoint(checkpoint_path, model, criterion, optimizer):
     assert os.path.isfile(checkpoint_path)
@@ -35,6 +43,13 @@ def warm_start_model(checkpoint_path, model, ignore_layers):
         dummy_dict = model.state_dict()
         dummy_dict.update(model_dict)
         model_dict = dummy_dict
+
+    for name in speaker_encoder_extended_parameters:
+        model_param = model.state_dict()[name]
+        checkpoint_param = model_dict[name]
+        if model_param.size() != checkpoint_param.size():
+            model_param[:, :checkpoint_param.size(1)] = checkpoint_param
+            model_dict[name] = model_param
+
     model.load_state_dict(model_dict)
     return model
-

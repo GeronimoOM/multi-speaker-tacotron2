@@ -10,7 +10,7 @@ tacotron_hparameters = tf.contrib.training.HParams(
     seed=1234,
     fp16_run=False,
     use_cuda=False,
-    ignore_layers=['embedding.weight'],
+    ignore_layers=[''],
 
     ################################
     # Data Parameters             #
@@ -43,7 +43,7 @@ tacotron_hparameters = tf.contrib.training.HParams(
     encoder_embedding_dim=512,
 
     # Speaker Encoder parameters
-    speaker_encoder=False,
+    speaker_encoder='',
     n_fragment_mel_windows=70,
     speaker_encoder_dim=128,
     speaker_encoder_n_layers=3,
@@ -105,7 +105,7 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     # Model Parameters             #
     ################################
     n_mel_channels=80,
-    n_fragment_mel_windows=70,
+    n_fragment_mel_windows=36,
     speaker_encoder_n_layers=3,
     speaker_encoder_rnn_dim=756,
     speaker_encoder_dim=128,

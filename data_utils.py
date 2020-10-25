@@ -128,7 +128,7 @@ class MelFragmentIter:
         # B, M, T
         mels = torch.empty(self.dataset.batch_size, self.dataset.n_fragment_mel_windows, self.dataset.n_mel_channels,
                            device=self.dataset.device)
-        speakers = list(self.dataset.speaker_fragments.keys())
+        speakers = np.array(list(self.dataset.speaker_fragments.keys()))
 
         if self.dataset.speaker_count > self.dataset.batch_size_speakers:
             speakers = np.random.choice(speakers, self.dataset.batch_size_speakers,

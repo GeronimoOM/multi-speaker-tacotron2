@@ -15,7 +15,7 @@ tacotron_hparameters = tf.contrib.training.HParams(
     ################################
     # Data Parameters             #
     ################################
-    data_train='',
+    data_train=[''],
     data_val_seen='',
     data_val_unseen='',
     text_cleaners=['english_cleaners'],
@@ -95,7 +95,7 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     ################################
     # Data Parameters             #
     ################################
-    data_train='',
+    data_train=[''],
     data_val_seen='',
     data_val_unseen='',
 

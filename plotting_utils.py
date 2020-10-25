@@ -80,10 +80,11 @@ def plot_gate_outputs_to_numpy(gate_targets, gate_outputs):
 
 
 def plot_speaker_embeddings_to_numpy(embeddings_pca, speakers):
+    N = len(speakers)
+    M = len(embeddings_pca) // N
     fig, ax = plt.subplots(figsize=(15, 15))
-    for speaker in speakers:
-        speaker_index = speakers == speaker
-        plt.scatter(embeddings_pca[speaker_index, 0], embeddings_pca[speaker_index, 1],
+    for n, speaker in enumerate(speakers):
+        plt.scatter(embeddings_pca[n * M:(n + 1) * M, 0], embeddings_pca[n * M:(n + 1) * M, 1],
                     marker=('x' if genders[speaker] == 1 else '.'))
 
     plt.tight_layout()

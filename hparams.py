@@ -15,9 +15,9 @@ tacotron_hparameters = tf.contrib.training.HParams(
     ################################
     # Data Parameters             #
     ################################
-    load_mel_from_disk=True,
-    data_train='/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_train.csv',
-    data_val='/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_val.csv',
+    data_train='',
+    data_val_seen='',
+    data_val_unseen='',
     text_cleaners=['english_cleaners'],
 
     ################################
@@ -76,13 +76,10 @@ tacotron_hparameters = tf.contrib.training.HParams(
     learning_rate=1e-3,
     weight_decay=1e-6,
     grad_clip_thresh=1.0,
-    batch_size=64,
+    batch_size=32,
+    val_seen_size=10,
+    val_unseen_size=32,
     mask_padding=True,  # set model's padded outputs to padded values
-
-    ################################
-    # Inference Hyperparameters #
-    ################################
-    waveglow_path='/Users/olehmatsuk/Thesis/waveglow_256channels_universal_v5.pt'
 )
 
 speaker_encoder_hparameters = tf.contrib.training.HParams(
@@ -98,8 +95,9 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     ################################
     # Data Parameters             #
     ################################
-    data_train='/Users/olehmatsuk/Thesis/data/mels/vctk/data_fragments.csv,/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_fragments.csv',
-    data_val='/Users/olehmatsuk/Thesis/data/mels/vctk/data_fragments.csv,/Users/olehmatsuk/Thesis/data/mels/konekorpus/data_fragments.csv',
+    data_train='',
+    data_val_seen='',
+    data_val_unseen='',
 
     ################################
     # Model Parameters             #
@@ -117,6 +115,10 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     grad_clip_thresh=5.0,
     batch_size_speakers=32,
     batch_size_speaker_samples=10,
+    val_seen_size_speakers=5,
+    val_seen_size_speaker_samples=32,
+    val_unseen_size_speakers=10,
+    val_unseen_size_speaker_samples=32,
 )
 
 model_hparams = {

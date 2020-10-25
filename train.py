@@ -18,22 +18,23 @@ from numpy import finfo
 
 
 def prepare_tacotron(device, output_directory, hparams):
-    trainset = TextMelDataset(hparams.data_train, device, hparams)
-    valset = TextMelDataset(hparams.data_val, device, hparams)
-
     collate_fn = TextMelCollate()
 
-    train_loader = DataLoader(trainset,
+    train_loader = DataLoader(TextMelDataset(hparams.data_train, device, hparams),
                               shuffle=True,
-                              pin_memory=False,
                               batch_size=hparams.batch_size,
                               drop_last=True, collate_fn=collate_fn)
 
-    val_loader = DataLoader(valset,
-                            shuffle=False,
-                            pin_memory=False,
-                            batch_size=hparams.batch_size,
-                            collate_fn=collate_fn)
+    val_loaders = {
+        'seen': DataLoader(TextMelDataset(hparams.data_val_seen, device, hparams),
+                           shuffle=False,
+                           batch_size=hparams.val_seen_size,
+                           collate_fn=collate_fn),
+        'unseen': DataLoader(TextMelDataset(hparams.data_val_unseen, device, hparams),
+                             shuffle=False,
+                             batch_size=hparams.val_unseen_size,
+                             collate_fn=collate_fn),
+    }
 
     model = Tacotron2(hparams).to(device)
     if hparams.speaker_encoder:
@@ -41,45 +42,53 @@ def prepare_tacotron(device, output_directory, hparams):
         model.speaker_encoder.to(device)
         for param in model.speaker_encoder.parameters():
             param.requires_grad = False
-    if hparams.fp16_run:
-        model.decoder.attention_layer.score_mask_value = finfo('float16').min
 
     criterion = Tacotron2Loss()
     optimizer = torch.optim.Adam(model.parameters(), lr=hparams.learning_rate, weight_decay=hparams.weight_decay)
 
     logger = Tacotron2Logger(output_directory)
 
-    return train_loader, val_loader, model, criterion, optimizer, logger
+    return train_loader, val_loaders, model, criterion, optimizer, logger
 
 
 def prepare_speaker_encoder(device, output_directory, hparams):
-    trainset = MelFragmentDataset(hparams.data_train, device, hparams)
-    valset = MelFragmentDataset(hparams.data_val, device, hparams)
-
-    train_loader = DataLoader(trainset, batch_size=None)
-    val_loader = DataLoader(valset, batch_size=None)
+    train_loader = DataLoader(MelFragmentDataset(hparams.data_train, hparams.batch_size_speakers,
+                                                 hparams.batch_size_speaker_samples, device, hparams), batch_size=None)
+    val_loaders = {
+        'seen': DataLoader(MelFragmentDataset(hparams.data_val_seen, hparams.val_seen_size_speakers,
+                                              hparams.val_seen_size_speaker_samples, device, hparams),
+                           batch_size=None),
+        'unseen': DataLoader(MelFragmentDataset(hparams.data_val_unseen, hparams.val_unseen_size_speakers,
+                                                hparams.val_unseen_size_speaker_samples, device, hparams),
+                             batch_size=None),
+    }
 
     model = SpeakerEncoder(hparams).to(device)
-    criterion = SpeakerEncoderLoss(hparams.batch_size_speakers, hparams.batch_size_speaker_samples).to(device)
+    criterion = SpeakerEncoderLoss().to(device)
     optimizer = torch.optim.SGD(chain(model.parameters(), criterion.parameters()), lr=hparams.learning_rate)
 
     logger = SpeakerEncoderLogger(output_directory)
 
-    return train_loader, val_loader, model, criterion, optimizer, logger
+    return train_loader, val_loaders, model, criterion, optimizer, logger
 
 
-def validate(model, val_loader, criterion, iteration, logger):
+def validate(model, val_loaders, criterion, iteration, logger):
     model.eval()
     criterion.eval()
+
+    params = {}
     with torch.no_grad():
-        x, y = next(iter(val_loader))
-        y_pred = model(x)
-        val_loss = criterion(y_pred, y).item()
+        for name, val_loader in val_loaders.items():
+            x, y = next(iter(val_loader))
+            y_pred = model(x)
+            val_loss = criterion(y_pred, y).item()
+            params[name] = {'y': y, 'y_pred': y_pred, 'loss': val_loss}
 
     model.train()
     criterion.train()
-    print("Validation loss {}: {:9f}  ".format(iteration, val_loss))
-    logger.log_validation(val_loss, y, y_pred, iteration)
+    print('Validation loss {}: '.format(iteration) +
+          ' '.join(['{} {:9f}'.format(key, key_params['loss']) for key, key_params in params.items()]))
+    logger.log_validation(params, iteration)
 
 
 def train(experiment, output_directory, checkpoint_path, warm_start, hparams):
@@ -89,13 +98,9 @@ def train(experiment, output_directory, checkpoint_path, warm_start, hparams):
 
     device = torch.device('cuda' if hparams.use_cuda else 'cpu')
     prepare_fn = prepare_tacotron if experiment == 'tacotron' else prepare_speaker_encoder
-    train_loader, val_loader, model, criterion, optimizer, logger = prepare_fn(device, output_directory, hparams)
+    train_loader, val_loaders, model, criterion, optimizer, logger = prepare_fn(device, output_directory, hparams)
 
     learning_rate = hparams.learning_rate
-
-    if hparams.fp16_run:
-        from apex import amp
-        model, optimizer = amp.initialize(model, optimizer, opt_level='O2')
 
     # Load checkpoint if one exists
     iteration = 0
@@ -124,19 +129,10 @@ def train(experiment, output_directory, checkpoint_path, warm_start, hparams):
             y_pred = model(x)
             loss = criterion(y_pred, y)
 
-            if hparams.fp16_run:
-                with amp.scale_loss(loss, optimizer) as scaled_loss:
-                    scaled_loss.backward()
-            else:
-                loss.backward()
-
+            loss.backward()
             loss = loss.item()
 
-            if hparams.fp16_run:
-                grad_norm = torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), hparams.grad_clip_thresh)
-                is_overflow = math.isnan(grad_norm)
-            else:
-                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), hparams.grad_clip_thresh)
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), hparams.grad_clip_thresh)
 
             optimizer.step()
 
@@ -144,10 +140,10 @@ def train(experiment, output_directory, checkpoint_path, warm_start, hparams):
                 duration = time.perf_counter() - start
                 print("Train loss {} {:.6f} Grad norm {:.6f} {:.2f}s/it".format(
                     iteration, loss, grad_norm, duration))
-                logger.log_training(loss, grad_norm, learning_rate, duration, iteration, criterion)
+                logger.log_training(loss, duration, iteration, criterion)
 
             if not is_overflow and iteration % hparams.iters_per_checkpoint == 0:
-                validate(model, val_loader, criterion, iteration, logger)
+                validate(model, val_loaders, criterion, iteration, logger)
                 checkpoint_path = os.path.join(output_directory, f'checkpoint_{iteration}')
                 save_checkpoint(model, criterion, optimizer, learning_rate, iteration, checkpoint_path)
 
@@ -177,6 +173,5 @@ if __name__ == '__main__':
 
     print(f'Model: {args.model}')
     print(f'Use CUDA: {hparams.use_cuda}')
-    print(f'FP16 Run: {hparams.fp16_run}')
 
     train(model, output_directory, args.checkpoint, args.warm_start, hparams)

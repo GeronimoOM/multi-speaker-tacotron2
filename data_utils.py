@@ -5,29 +5,22 @@ import pandas as pd
 import torch
 import torch.utils.data
 from text import text_to_sequence
-from audio import init_stft, mel_spectrogram
 
 
 class TextMelDataset(torch.utils.data.Dataset):
     def __init__(self, data_files, device, hparams):
         self.data = []
-        for data_file in data_files.split(','):
+        for data_file in data_files if isinstance(data_files, list) else [data_files]:
             data = pd.read_csv(data_file)
             data['mel'] = data['mel'].apply(lambda mel: os.path.join(os.path.split(data_file)[0], mel))
             self.data.append(data)
         self.data = pd.concat(self.data)
         self.device = device
-        self.load_mel_from_disk = hparams.load_mel_from_disk
         self.text_cleaners = hparams.text_cleaners
-        self.stft = init_stft(hparams)
         random.seed(hparams.seed)
 
     def get_mel(self, audio_path):
-        if not self.load_mel_from_disk:
-            mel = mel_spectrogram(audio_path, self.stft)
-        else:
-            mel = torch.from_numpy(np.load(audio_path))
-
+        mel = torch.from_numpy(np.load(audio_path))
         return mel.transpose(0, 1).to(device=self.device)
 
     def get_text(self, text):
@@ -75,9 +68,9 @@ class TextMelCollate:
 
 class MelFragmentDataset(torch.utils.data.IterableDataset):
 
-    def __init__(self, fragments_files, device, hparams):
+    def __init__(self, fragments_files, batch_size_speakers, batch_size_speaker_samples, device, hparams):
         self.fragments = []
-        for fragment_file in fragments_files.split(','):
+        for fragment_file in fragments_files if isinstance(fragments_files, list) else [fragments_files]:
             fragments = pd.read_csv(fragment_file)
             fragments['mel'] = fragments['mel'].apply(lambda mel: os.path.join(os.path.split(fragment_file)[0], mel))
             self.fragments.append(fragments)
@@ -86,18 +79,18 @@ class MelFragmentDataset(torch.utils.data.IterableDataset):
         self.n_mel_channels = hparams.n_mel_channels
         self.n_fragment_mel_windows = hparams.n_fragment_mel_windows
         self.speaker_fragments = {}
-        self.batch_size_speakers = hparams.batch_size_speakers
-        self.batch_size_speaker_samples = hparams.batch_size_speaker_samples
+        self.batch_size_speakers = batch_size_speakers
+        self.batch_size_speaker_samples = batch_size_speaker_samples
 
         for _, row in self.fragments.iterrows():
             self.speaker_fragments.setdefault(row['speaker'], []).append((row['mel'], row['from'], row['to']))
 
-        self.speaker_fragments = [fs for fs in self.speaker_fragments.values()
-                                  if len(fs) >= self.batch_size_speaker_samples]
+        self.speaker_fragments = {s: fs for s, fs in self.speaker_fragments.items()
+                                  if len(fs) >= self.batch_size_speaker_samples}
 
         self.speaker_count = len(self.speaker_fragments)
 
-        speaker_fragment_counts = [len(fs) for fs in self.speaker_fragments]
+        speaker_fragment_counts = [len(fs) for fs in self.speaker_fragments.values()]
         self.fragment_count = sum(speaker_fragment_counts)
         self.speaker_p = np.array(speaker_fragment_counts) / self.fragment_count
 
@@ -132,23 +125,25 @@ class MelFragmentIter:
 
         self.last_batch += 1
 
-        speaker_indices = np.random.choice(range(self.dataset.speaker_count), self.dataset.batch_size_speakers,
-                                           replace=False, p=self.dataset.speaker_p)
-
         # B, M, T
         mels = torch.empty(self.dataset.batch_size, self.dataset.n_fragment_mel_windows, self.dataset.n_mel_channels,
                            device=self.dataset.device)
-        speakers = torch.empty(self.dataset.batch_size, dtype=torch.int)
+        speakers = list(self.dataset.speaker_fragments.keys())
+
+        if self.dataset.speaker_count > self.dataset.batch_size_speakers:
+            speakers = np.random.choice(speakers, self.dataset.batch_size_speakers,
+                                        replace=False, p=self.dataset.speaker_p)
 
         i = 0
-        for s in speaker_indices:
+        for s in speakers:
             fragments = self.dataset.speaker_fragments[s]
-            fragments_indices = np.random.choice(range(len(fragments)), self.dataset.batch_size_speaker_samples,
-                                                 replace=False)
+            fragments_indices = range(len(fragments))
+            if len(fragments) > self.dataset.batch_size_speaker_samples:
+                fragments_indices = np.random.choice(fragments_indices, self.dataset.batch_size_speaker_samples,
+                                                     replace=False)
             for f in fragments_indices:
                 mel, fr, to = fragments[f]
                 mels[i] = self.dataset.get_fragment(mel, fr, to).transpose(0, 1)
-                speakers[i] = s
                 i += 1
 
         return mels, speakers

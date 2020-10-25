@@ -32,7 +32,6 @@ class Encoder(nn.Module):
         """
 
         x = self.embedding(text).transpose(1, 2)  # B, Em, T
-
         for conv in self.convolutions:
             x = F.dropout(F.relu(conv(x)), 0.5, self.training)  # B, E, T
 

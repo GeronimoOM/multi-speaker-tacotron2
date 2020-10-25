@@ -1,5 +1,12 @@
 venv
 apex
 *.pyc
-**/__pycache__/
+__pycache__
+audio/__pycache__
+model/__pycache__
+model/layers__pycache__
+preprocessors/__pycache__
+scripts/__pycache__
+text/__pycache__
 .idea/
+runs

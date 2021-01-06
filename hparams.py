@@ -18,7 +18,7 @@ tacotron_hparameters = tf.contrib.training.HParams(
     data_train=[''],
     data_val_seen='',
     data_val_unseen='',
-    text_cleaners=['english_cleaners'],
+    text_cleaners=['basic_cleaners'],
 
     ################################
     # Audio Parameters             #
@@ -44,7 +44,7 @@ tacotron_hparameters = tf.contrib.training.HParams(
 
     # Speaker Encoder parameters
     speaker_encoder='',
-    n_fragment_mel_windows=70,
+    n_fragment_mel_windows=72,
     speaker_encoder_dim=128,
     speaker_encoder_n_layers=3,
     speaker_encoder_rnn_dim=756,
@@ -103,9 +103,9 @@ speaker_encoder_hparameters = tf.contrib.training.HParams(
     # Model Parameters             #
     ################################
     n_mel_channels=80,
-    n_fragment_mel_windows=36,
+    n_fragment_mel_windows=72,
     speaker_encoder_n_layers=3,
-    speaker_encoder_rnn_dim=756,
+    speaker_encoder_rnn_dim=768,
     speaker_encoder_dim=128,
 
     ################################

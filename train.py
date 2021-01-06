@@ -1,7 +1,6 @@
 import os
 import time
 import argparse
-import math
 from datetime import datetime
 from itertools import chain
 
@@ -14,7 +13,6 @@ from loss import Tacotron2Loss, SpeakerEncoderLoss
 from logger import Tacotron2Logger, SpeakerEncoderLogger
 from train_utils import load_checkpoint, save_checkpoint, warm_start_model
 from hparams import create_hparams
-from numpy import finfo
 
 
 def prepare_tacotron(device, output_directory, hparams):
